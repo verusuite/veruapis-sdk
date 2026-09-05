@@ -1,1 +1,5 @@
+# Coverage output. "coverage" with no extension is what PowerShell leaves
+# behind when it splits -coverprofile=coverage.out at the equals sign.
 coverage.out
+coverage
+*.out
