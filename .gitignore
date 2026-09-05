@@ -1,0 +1,23 @@
+# Dependencies
+node_modules/
+__pycache__/
+*.egg-info/
+.venv/
+venv/
+
+# Build output
+dist/
+build/
+bin/
+obj/
+*.tgz
+
+# Tooling
+.openapi-generator/
+.idea/
+.vscode/
+*.log
+
+# Local environment
+.env
+.env.*

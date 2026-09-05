@@ -1,0 +1,43 @@
+{
+  "name": "@verusuite/api",
+  "version": "0.1.0",
+  "description": "Client for the VeruSuite API: mail, calendar and workspace administration.",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist",
+    "README.md"
+  ],
+  "engines": {
+    "node": ">=18"
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test": "tsx --test test/*.test.ts",
+    "coverage": "c8 tsx --test test/*.test.ts",
+    "check-spec": "node scripts/check-spec.mjs"
+  },
+  "keywords": [
+    "verusuite",
+    "veruapis",
+    "email",
+    "calendar",
+    "api"
+  ],
+  "license": "MIT",
+  "devDependencies": {
+    "@types/node": "^22.7.0",
+    "c8": "^10.1.2",
+    "tsx": "^4.19.0",
+    "typescript": "^5.6.0",
+    "yaml": "^2.5.0"
+  }
+}
