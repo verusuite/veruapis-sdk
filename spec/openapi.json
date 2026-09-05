@@ -1,0 +1,4686 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "VeruSuite APIs",
+    "version": "dev",
+    "summary": "Mail, calendar and workspace administration for a VeruSuite workspace.",
+    "description": "Every call is authorised by a key you create yourself and acts as you, limited to the permissions you granted it. Keys are issued at veruapis.com.\n\nThis document is generated from the same tables that route and gate the API, so it cannot describe an endpoint the server does not serve."
+  },
+  "servers": [
+    {
+      "url": "https://api.veruapis.com",
+      "description": "Production"
+    }
+  ],
+  "security": [
+    {
+      "apiKey": []
+    }
+  ],
+  "tags": [
+    {
+      "name": "calendar",
+      "description": "Events, invitations, recurrence and availability."
+    },
+    {
+      "name": "mail",
+      "description": "Read, organise and send email. Sending is its own permission, separate from writing."
+    }
+  ],
+  "paths": {
+    "/v1/calendars": {
+      "get": {
+        "operationId": "calendarListCalendars",
+        "summary": "List calendars",
+        "description": "Lists the calendars the user can see.",
+        "tags": [
+          "calendar"
+        ],
+        "responses": {
+          "200": {
+            "description": "Success.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "color": {
+                          "type": "string",
+                          "description": "A hex colour the calendar apps render it in."
+                        },
+                        "effective_permission": {
+                          "type": "string",
+                          "description": "What this key may do with it once sharing is resolved.",
+                          "enum": [
+                            "owner",
+                            "write",
+                            "read"
+                          ]
+                        },
+                        "id": {
+                          "type": "string",
+                          "description": "Use this wherever an endpoint takes a calendar_id."
+                        },
+                        "name": {
+                          "type": "string"
+                        },
+                        "owner_email": {
+                          "type": "string",
+                          "description": "Who owns it. Not always you: a calendar shared with you appears here too."
+                        }
+                      },
+                      "additionalProperties": false
+                    },
+                    "meta": {
+                      "$ref": "#/components/schemas/Meta"
+                    }
+                  },
+                  "required": [
+                    "data",
+                    "meta"
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "The credential is missing, malformed, or not one this API issues.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "The key is valid but was not granted a permission this endpoint needs.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "The plan's rate limit or daily quota is spent. See RateLimit-Reset.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Something failed on our side. The request id in the body identifies it.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "apiKey": [
+              "calendar.events.read"
+            ]
+          }
+        ]
+      },
+      "post": {
+        "operationId": "calendarCreateCalendar",
+        "summary": "Create a calendar",
+        "description": "Creates a calendar owned by the user.",
+        "tags": [
+          "calendar"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "color": {
+                    "type": "string",
+                    "description": "Hex, for example #3b82f6."
+                  },
+                  "name": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "name"
+                ],
+                "additionalProperties": false
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Success.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "data": {
+                      "type": "object",
+                      "additionalProperties": false
+                    },
+                    "meta": {
+                      "$ref": "#/components/schemas/Meta"
+                    }
+                  },
+                  "required": [
+                    "data",
+                    "meta"
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "The credential is missing, malformed, or not one this API issues.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "The key is valid but was not granted a permission this endpoint needs.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "The plan's rate limit or daily quota is spent. See RateLimit-Reset.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Something failed on our side. The request id in the body identifies it.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "apiKey": [
+              "calendar.events.write"
+            ]
+          }
+        ]
+      }
+    },
+    "/v1/calendars/{calendar_id}": {
+      "get": {
+        "operationId": "calendarGetCalendar",
+        "summary": "Get a calendar",
+        "description": "Returns one calendar with its sharing and permissions.",
+        "tags": [
+          "calendar"
+        ],
+        "parameters": [
+          {
+            "name": "calendar_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "data": {
+                      "type": "object",
+                      "additionalProperties": false
+                    },
+                    "meta": {
+                      "$ref": "#/components/schemas/Meta"
+                    }
+                  },
+                  "required": [
+                    "data",
+                    "meta"
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "The credential is missing, malformed, or not one this API issues.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "The key is valid but was not granted a permission this endpoint needs.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such record, or it belongs to another workspace.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "The plan's rate limit or daily quota is spent. See RateLimit-Reset.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Something failed on our side. The request id in the body identifies it.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "apiKey": [
+              "calendar.events.read"
+            ]
+          }
+        ]
+      },
+      "patch": {
+        "operationId": "calendarUpdateCalendar",
+        "summary": "Update a calendar",
+        "description": "Renames a calendar or changes its colour and visibility.\n\nSend only what changes.",
+        "tags": [
+          "calendar"
+        ],
+        "parameters": [
+          {
+            "name": "calendar_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "data": {
+                      "type": "object",
+                      "additionalProperties": false
+                    },
+                    "meta": {
+                      "$ref": "#/components/schemas/Meta"
+                    }
+                  },
+                  "required": [
+                    "data",
+                    "meta"
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "The credential is missing, malformed, or not one this API issues.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "The key is valid but was not granted a permission this endpoint needs.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such record, or it belongs to another workspace.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "The plan's rate limit or daily quota is spent. See RateLimit-Reset.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Something failed on our side. The request id in the body identifies it.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "apiKey": [
+              "calendar.events.write"
+            ]
+          }
+        ]
+      },
+      "delete": {
+        "operationId": "calendarDeleteCalendar",
+        "summary": "Delete a calendar",
+        "description": "Deletes a calendar and the events in it.\n\nDeletes the calendar and every event in it.",
+        "tags": [
+          "calendar"
+        ],
+        "parameters": [
+          {
+            "name": "calendar_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Success.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "data": {
+                      "type": "object",
+                      "additionalProperties": false
+                    },
+                    "meta": {
+                      "$ref": "#/components/schemas/Meta"
+                    }
+                  },
+                  "required": [
+                    "data",
+                    "meta"
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "The credential is missing, malformed, or not one this API issues.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "The key is valid but was not granted a permission this endpoint needs.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such record, or it belongs to another workspace.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "The plan's rate limit or daily quota is spent. See RateLimit-Reset.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Something failed on our side. The request id in the body identifies it.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "apiKey": [
+              "calendar.events.write"
+            ]
+          }
+        ]
+      }
+    },
+    "/v1/calendars/{calendar_id}/events": {
+      "get": {
+        "operationId": "calendarListCalendarEvents",
+        "summary": "List events in a calendar",
+        "description": "Lists events in one calendar over a time range.",
+        "tags": [
+          "calendar"
+        ],
+        "parameters": [
+          {
+            "name": "calendar_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "start",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "date-time"
+            }
+          },
+          {
+            "name": "end",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "date-time"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "description": "Defaults to 250."
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "data": {
+                      "type": "object",
+                      "additionalProperties": false
+                    },
+                    "meta": {
+                      "$ref": "#/components/schemas/Meta"
+                    }
+                  },
+                  "required": [
+                    "data",
+                    "meta"
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "The credential is missing, malformed, or not one this API issues.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "The key is valid but was not granted a permission this endpoint needs.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such record, or it belongs to another workspace.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "The plan's rate limit or daily quota is spent. See RateLimit-Reset.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Something failed on our side. The request id in the body identifies it.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "apiKey": [
+              "calendar.events.read"
+            ]
+          }
+        ]
+      },
+      "post": {
+        "operationId": "calendarCreateEvent",
+        "summary": "Create an event",
+        "description": "Creates an event and sends invitations to any attendees.\n\nListing an attendee sends them an invitation. To reschedule afterwards use PATCH rather than deleting and recreating: PATCH keeps the id and UID and raises the sequence, so their calendar updates the meeting in place instead of cancelling one and inviting them to another.",
+        "tags": [
+          "calendar"
+        ],
+        "parameters": [
+          {
+            "name": "calendar_id",
+            "in": "path",
+            "required": true,
+            "description": "The calendar to add it to.",
+            "schema": {
+              "type": "string",
+              "description": "The calendar to add it to."
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "all_day": {
+                    "type": "boolean",
+                    "description": "Stores dates without times. Defaults to false."
+                  },
+                  "attendees": {
+                    "type": "array",
+                    "description": "Who is invited. Listing anyone here sends them an invitation.",
+                    "items": {
+                      "type": "object",
+                      "properties": {
+                        "cutype": {
+                          "type": "string",
+                          "description": "What kind of attendee this is. Defaults to INDIVIDUAL.",
+                          "enum": [
+                            "INDIVIDUAL",
+                            "GROUP",
+                            "RESOURCE",
+                            "ROOM"
+                          ]
+                        },
+                        "display_name": {
+                          "type": "string",
+                          "description": "Shown instead of the address in a calendar app."
+                        },
+                        "email": {
+                          "type": "string",
+                          "description": "The only required field on an attendee."
+                        },
+                        "partstat": {
+                          "type": "string",
+                          "description": "Their answer. Set it only when you already know it; otherwise leave it for them to give. Defaults to NEEDS-ACTION.",
+                          "enum": [
+                            "NEEDS-ACTION",
+                            "ACCEPTED",
+                            "DECLINED",
+                            "TENTATIVE",
+                            "DELEGATED"
+                          ]
+                        },
+                        "role": {
+                          "type": "string",
+                          "description": "Whether their presence is needed, optional, or informational. Defaults to REQ-PARTICIPANT.",
+                          "enum": [
+                            "REQ-PARTICIPANT",
+                            "OPT-PARTICIPANT",
+                            "NON-PARTICIPANT",
+                            "CHAIR"
+                          ]
+                        }
+                      },
+                      "required": [
+                        "email"
+                      ],
+                      "additionalProperties": false
+                    }
+                  },
+                  "description": {
+                    "type": "string"
+                  },
+                  "ends_at": {
+                    "type": "string",
+                    "format": "date-time",
+                    "description": "Must be after starts_at."
+                  },
+                  "location": {
+                    "type": "string"
+                  },
+                  "organizer": {
+                    "type": "string",
+                    "description": "The address shown as organiser. Defaults to you."
+                  },
+                  "rrule": {
+                    "type": "string",
+                    "description": "An RFC 5545 recurrence rule, for example FREQ=WEEKLY;BYDAY=TU,TH."
+                  },
+                  "starts_at": {
+                    "type": "string",
+                    "format": "date-time",
+                    "description": "In UTC. 2026-09-05T12:00:00Z is 3pm where the offset is +03:00."
+                  },
+                  "summary": {
+                    "type": "string",
+                    "description": "The title, as it appears in a calendar app."
+                  },
+                  "url": {
+                    "type": "string",
+                    "description": "Typically a meeting link."
+                  }
+                },
+                "required": [
+                  "summary",
+                  "starts_at",
+                  "ends_at"
+                ],
+                "additionalProperties": false
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Success.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "data": {
+                      "type": "object",
+                      "additionalProperties": false
+                    },
+                    "meta": {
+                      "$ref": "#/components/schemas/Meta"
+                    }
+                  },
+                  "required": [
+                    "data",
+                    "meta"
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "The credential is missing, malformed, or not one this API issues.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "The key is valid but was not granted a permission this endpoint needs.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such record, or it belongs to another workspace.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "The plan's rate limit or daily quota is spent. See RateLimit-Reset.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Something failed on our side. The request id in the body identifies it.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "apiKey": [
+              "calendar.events.write"
+            ]
+          }
+        ]
+      }
+    },
+    "/v1/calendars/{calendar_id}/events/{id}": {
+      "get": {
+        "operationId": "calendarGetEvent",
+        "summary": "Get an event",
+        "description": "Returns one event with its attendees and recurrence rule.",
+        "tags": [
+          "calendar"
+        ],
+        "parameters": [
+          {
+            "name": "calendar_id",
+            "in": "path",
+            "required": true,
+            "description": "An event id is unique within its calendar, not across the mailbox.",
+            "schema": {
+              "type": "string",
+              "description": "An event id is unique within its calendar, not across the mailbox."
+            }
+          },
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "data": {
+                      "type": "object",
+                      "additionalProperties": false
+                    },
+                    "meta": {
+                      "$ref": "#/components/schemas/Meta"
+                    }
+                  },
+                  "required": [
+                    "data",
+                    "meta"
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "The credential is missing, malformed, or not one this API issues.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "The key is valid but was not granted a permission this endpoint needs.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such record, or it belongs to another workspace.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "The plan's rate limit or daily quota is spent. See RateLimit-Reset.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Something failed on our side. The request id in the body identifies it.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "apiKey": [
+              "calendar.events.read"
+            ]
+          }
+        ]
+      },
+      "patch": {
+        "operationId": "calendarUpdateEvent",
+        "summary": "Update an event",
+        "description": "Changes an event and notifies attendees.\n\nSend only what changes; the same fields as create. The event keeps its id and UID, and its sequence rises so attendees see a revision rather than a new invitation.",
+        "tags": [
+          "calendar"
+        ],
+        "parameters": [
+          {
+            "name": "calendar_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "data": {
+                      "type": "object",
+                      "additionalProperties": false
+                    },
+                    "meta": {
+                      "$ref": "#/components/schemas/Meta"
+                    }
+                  },
+                  "required": [
+                    "data",
+                    "meta"
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "The credential is missing, malformed, or not one this API issues.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "The key is valid but was not granted a permission this endpoint needs.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such record, or it belongs to another workspace.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "The plan's rate limit or daily quota is spent. See RateLimit-Reset.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Something failed on our side. The request id in the body identifies it.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "apiKey": [
+              "calendar.events.write"
+            ]
+          }
+        ]
+      },
+      "delete": {
+        "operationId": "calendarDeleteEvent",
+        "summary": "Delete an event",
+        "description": "Cancels an event and notifies attendees.\n\nAttendees receive a cancellation.",
+        "tags": [
+          "calendar"
+        ],
+        "parameters": [
+          {
+            "name": "calendar_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Success.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "data": {
+                      "type": "object",
+                      "additionalProperties": false
+                    },
+                    "meta": {
+                      "$ref": "#/components/schemas/Meta"
+                    }
+                  },
+                  "required": [
+                    "data",
+                    "meta"
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "The credential is missing, malformed, or not one this API issues.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "The key is valid but was not granted a permission this endpoint needs.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such record, or it belongs to another workspace.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "The plan's rate limit or daily quota is spent. See RateLimit-Reset.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Something failed on our side. The request id in the body identifies it.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "apiKey": [
+              "calendar.events.write"
+            ]
+          }
+        ]
+      }
+    },
+    "/v1/calendars/{calendar_id}/events/{id}/rsvp": {
+      "post": {
+        "operationId": "calendarRsvp",
+        "summary": "Respond to an invitation",
+        "description": "Accepts, declines or tentatively accepts an invitation.\n\nRead access to the calendar is enough; you do not need write to answer an invitation. Your address must be on the attendee list, or this returns 404.",
+        "tags": [
+          "calendar"
+        ],
+        "parameters": [
+          {
+            "name": "calendar_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "comment": {
+                    "type": "string",
+                    "description": "A note for the organiser, sent with the reply and not stored."
+                  },
+                  "response": {
+                    "type": "string",
+                    "description": "Your answer to the invitation.",
+                    "enum": [
+                      "accepted",
+                      "declined",
+                      "tentative"
+                    ]
+                  }
+                },
+                "required": [
+                  "response"
+                ],
+                "additionalProperties": false
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "data": {
+                      "type": "object",
+                      "additionalProperties": false
+                    },
+                    "meta": {
+                      "$ref": "#/components/schemas/Meta"
+                    }
+                  },
+                  "required": [
+                    "data",
+                    "meta"
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "The credential is missing, malformed, or not one this API issues.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "The key is valid but was not granted a permission this endpoint needs.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such record, or it belongs to another workspace.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "The plan's rate limit or daily quota is spent. See RateLimit-Reset.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Something failed on our side. The request id in the body identifies it.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "apiKey": [
+              "calendar.events.write"
+            ]
+          }
+        ]
+      }
+    },
+    "/v1/drafts": {
+      "get": {
+        "operationId": "mailListDrafts",
+        "summary": "List drafts",
+        "description": "Lists saved drafts.",
+        "tags": [
+          "mail"
+        ],
+        "responses": {
+          "200": {
+            "description": "Success.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "folder_id": {
+                          "type": "string"
+                        },
+                        "from": {
+                          "type": "string"
+                        },
+                        "id": {
+                          "type": "string"
+                        },
+                        "size": {
+                          "type": "integer"
+                        },
+                        "subject": {
+                          "type": "string"
+                        },
+                        "updated_at": {
+                          "type": "string",
+                          "format": "date-time"
+                        }
+                      },
+                      "additionalProperties": false
+                    },
+                    "meta": {
+                      "$ref": "#/components/schemas/Meta"
+                    }
+                  },
+                  "required": [
+                    "data",
+                    "meta"
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "The credential is missing, malformed, or not one this API issues.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "The key is valid but was not granted a permission this endpoint needs.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "The plan's rate limit or daily quota is spent. See RateLimit-Reset.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Something failed on our side. The request id in the body identifies it.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "apiKey": [
+              "mail.messages.read"
+            ]
+          }
+        ]
+      },
+      "post": {
+        "operationId": "mailCreateDraft",
+        "summary": "Create a draft",
+        "description": "Saves a draft without sending it.\n\nA draft can be incomplete: nothing here is required, because a draft is by definition unfinished.",
+        "tags": [
+          "mail"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "html": {
+                    "type": "string"
+                  },
+                  "subject": {
+                    "type": "string"
+                  },
+                  "text": {
+                    "type": "string"
+                  },
+                  "to": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    }
+                  }
+                },
+                "additionalProperties": false
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Success.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "data": {
+                      "type": "object",
+                      "additionalProperties": false
+                    },
+                    "meta": {
+                      "$ref": "#/components/schemas/Meta"
+                    }
+                  },
+                  "required": [
+                    "data",
+                    "meta"
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "The credential is missing, malformed, or not one this API issues.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "The key is valid but was not granted a permission this endpoint needs.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "The plan's rate limit or daily quota is spent. See RateLimit-Reset.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Something failed on our side. The request id in the body identifies it.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "apiKey": [
+              "mail.messages.write"
+            ]
+          }
+        ]
+      }
+    },
+    "/v1/drafts/{id}": {
+      "put": {
+        "operationId": "mailReplaceDraft",
+        "summary": "Replace a draft",
+        "description": "Replaces a saved draft in full. Drafts are replaced rather than patched: there is no coherent way to merge two versions of a message body.\n\nPUT, so this replaces the draft entirely. Anything you leave out is cleared, because there is no coherent way to merge two versions of a message body.",
+        "tags": [
+          "mail"
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "html": {
+                    "type": "string"
+                  },
+                  "subject": {
+                    "type": "string"
+                  },
+                  "text": {
+                    "type": "string"
+                  },
+                  "to": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    }
+                  }
+                },
+                "additionalProperties": false
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "data": {
+                      "type": "object",
+                      "additionalProperties": false
+                    },
+                    "meta": {
+                      "$ref": "#/components/schemas/Meta"
+                    }
+                  },
+                  "required": [
+                    "data",
+                    "meta"
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "The credential is missing, malformed, or not one this API issues.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "The key is valid but was not granted a permission this endpoint needs.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such record, or it belongs to another workspace.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "The plan's rate limit or daily quota is spent. See RateLimit-Reset.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Something failed on our side. The request id in the body identifies it.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "apiKey": [
+              "mail.messages.write"
+            ]
+          }
+        ]
+      },
+      "delete": {
+        "operationId": "mailDeleteDraft",
+        "summary": "Delete a draft",
+        "description": "Discards a draft.",
+        "tags": [
+          "mail"
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Success.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "data": {
+                      "type": "object",
+                      "additionalProperties": false
+                    },
+                    "meta": {
+                      "$ref": "#/components/schemas/Meta"
+                    }
+                  },
+                  "required": [
+                    "data",
+                    "meta"
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "The credential is missing, malformed, or not one this API issues.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "The key is valid but was not granted a permission this endpoint needs.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such record, or it belongs to another workspace.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "The plan's rate limit or daily quota is spent. See RateLimit-Reset.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Something failed on our side. The request id in the body identifies it.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "apiKey": [
+              "mail.messages.write"
+            ]
+          }
+        ]
+      }
+    },
+    "/v1/events": {
+      "get": {
+        "operationId": "calendarListEvents",
+        "summary": "List events",
+        "description": "Lists events across every calendar in a time range, with recurring events expanded. Start and end are required: a recurring series has no finite end.\n\nstart and end are required because a recurring series expands without limit — there is no finite answer to \"all events\". Recurring events arrive already expanded, one entry per occurrence. Times are UTC; the offset a calendar app shows is that app's timezone, so anything scheduling by wall-clock time needs the user's zone from elsewhere.",
+        "tags": [
+          "calendar"
+        ],
+        "parameters": [
+          {
+            "name": "start",
+            "in": "query",
+            "required": true,
+            "description": "Beginning of the window.",
+            "schema": {
+              "type": "string",
+              "format": "date-time",
+              "description": "Beginning of the window."
+            }
+          },
+          {
+            "name": "end",
+            "in": "query",
+            "required": true,
+            "description": "End of the window. Must be after start.",
+            "schema": {
+              "type": "string",
+              "format": "date-time",
+              "description": "End of the window. Must be after start."
+            }
+          },
+          {
+            "name": "calendar_id",
+            "in": "query",
+            "description": "Limit to one calendar. Repeat for several. Omit for all of them.",
+            "schema": {
+              "type": "string",
+              "description": "Limit to one calendar. Repeat for several. Omit for all of them."
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "description": "Events in this response, 1 to 1000.",
+            "schema": {
+              "type": "integer",
+              "description": "Events in this response, 1 to 1000. Defaults to 250."
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "data": {
+                      "type": "object",
+                      "additionalProperties": false
+                    },
+                    "meta": {
+                      "$ref": "#/components/schemas/Meta"
+                    }
+                  },
+                  "required": [
+                    "data",
+                    "meta"
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "The credential is missing, malformed, or not one this API issues.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "The key is valid but was not granted a permission this endpoint needs.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "The plan's rate limit or daily quota is spent. See RateLimit-Reset.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Something failed on our side. The request id in the body identifies it.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "apiKey": [
+              "calendar.events.read"
+            ]
+          }
+        ]
+      }
+    },
+    "/v1/folders": {
+      "get": {
+        "operationId": "mailListFolders",
+        "summary": "List mail folders",
+        "description": "Lists every folder in the mailbox with its message and unread counts.\n\nReturns every folder rather than a page. A mailbox has tens of them, so paging would mean writing a loop that never runs twice.",
+        "tags": [
+          "mail"
+        ],
+        "responses": {
+          "200": {
+            "description": "Success.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "id": {
+                          "type": "string",
+                          "description": "Use this wherever an endpoint takes a folder_id."
+                        },
+                        "message_count": {
+                          "type": "integer",
+                          "description": "Messages in the folder, including read ones."
+                        },
+                        "name": {
+                          "type": "string",
+                          "description": "The folder's name as it appears in webmail and over IMAP."
+                        },
+                        "unread_count": {
+                          "type": "integer",
+                          "description": "Messages without the read flag."
+                        }
+                      },
+                      "additionalProperties": false
+                    },
+                    "meta": {
+                      "$ref": "#/components/schemas/Meta"
+                    }
+                  },
+                  "required": [
+                    "data",
+                    "meta"
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "The credential is missing, malformed, or not one this API issues.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "The key is valid but was not granted a permission this endpoint needs.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "The plan's rate limit or daily quota is spent. See RateLimit-Reset.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Something failed on our side. The request id in the body identifies it.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "apiKey": [
+              "mail.folders.read"
+            ]
+          }
+        ]
+      },
+      "post": {
+        "operationId": "mailCreateFolder",
+        "summary": "Create a mail folder",
+        "description": "Creates a folder in the mailbox.",
+        "tags": [
+          "mail"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "name": {
+                    "type": "string",
+                    "description": "Shown in webmail and over IMAP. Must be unique among its siblings."
+                  },
+                  "parent_id": {
+                    "type": "string",
+                    "description": "Nests the folder inside another. Omit for a top-level folder."
+                  }
+                },
+                "required": [
+                  "name"
+                ],
+                "additionalProperties": false
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Success.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "id": {
+                          "type": "string",
+                          "description": "The new folder, ready to move messages into."
+                        }
+                      },
+                      "additionalProperties": false
+                    },
+                    "meta": {
+                      "$ref": "#/components/schemas/Meta"
+                    }
+                  },
+                  "required": [
+                    "data",
+                    "meta"
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "The credential is missing, malformed, or not one this API issues.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "The key is valid but was not granted a permission this endpoint needs.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "The plan's rate limit or daily quota is spent. See RateLimit-Reset.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Something failed on our side. The request id in the body identifies it.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "apiKey": [
+              "mail.folders.write"
+            ]
+          }
+        ]
+      }
+    },
+    "/v1/folders/{folder_id}/messages/flags": {
+      "post": {
+        "operationId": "mailUpdateFlags",
+        "summary": "Change flags and labels",
+        "description": "Marks messages read, starred or answered, and adds or removes labels. Takes a batch, so one call can change hundreds of messages.\n\nTakes a batch, so marking five hundred messages read is one call. Reach for set only when you mean \"this is the exact set\": it removes every flag and label you did not list.",
+        "tags": [
+          "mail"
+        ],
+        "parameters": [
+          {
+            "name": "folder_id",
+            "in": "path",
+            "required": true,
+            "description": "The folder holding the messages. Flags are set within a folder.",
+            "schema": {
+              "type": "string",
+              "description": "The folder holding the messages. Flags are set within a folder."
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "flags": {
+                    "type": "array",
+                    "description": "System flags to change.",
+                    "items": {
+                      "type": "string",
+                      "enum": [
+                        "read",
+                        "starred",
+                        "answered",
+                        "draft",
+                        "deleted"
+                      ]
+                    }
+                  },
+                  "labels": {
+                    "type": "array",
+                    "description": "User-defined labels to change. Any text without a leading backslash.",
+                    "items": {
+                      "type": "string"
+                    }
+                  },
+                  "message_ids": {
+                    "type": "array",
+                    "description": "The messages to change. All must be in the folder above.",
+                    "items": {
+                      "type": "string"
+                    }
+                  },
+                  "op": {
+                    "type": "string",
+                    "description": "add and remove adjust what is there; set replaces it and drops anything not listed.",
+                    "enum": [
+                      "add",
+                      "remove",
+                      "set"
+                    ]
+                  }
+                },
+                "required": [
+                  "message_ids",
+                  "op"
+                ],
+                "additionalProperties": false
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "flags": {
+                          "type": "object",
+                          "description": "The flags after the change, not the ones you sent.",
+                          "properties": {
+                            "answered": {
+                              "type": "boolean",
+                              "description": "Set automatically when you reply through this API."
+                            },
+                            "deleted": {
+                              "type": "boolean",
+                              "description": "Marked for removal but still present until the folder is expunged."
+                            },
+                            "draft": {
+                              "type": "boolean"
+                            },
+                            "read": {
+                              "type": "boolean",
+                              "description": "The IMAP Seen flag. Absent means unread."
+                            },
+                            "starred": {
+                              "type": "boolean",
+                              "description": "The IMAP Flagged bit. One star, not a colour."
+                            }
+                          },
+                          "additionalProperties": false
+                        },
+                        "id": {
+                          "type": "string"
+                        },
+                        "labels": {
+                          "type": "array",
+                          "items": {
+                            "type": "string"
+                          }
+                        }
+                      },
+                      "additionalProperties": false
+                    },
+                    "meta": {
+                      "$ref": "#/components/schemas/Meta"
+                    }
+                  },
+                  "required": [
+                    "data",
+                    "meta"
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "The credential is missing, malformed, or not one this API issues.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "The key is valid but was not granted a permission this endpoint needs.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such record, or it belongs to another workspace.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "The plan's rate limit or daily quota is spent. See RateLimit-Reset.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Something failed on our side. The request id in the body identifies it.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "apiKey": [
+              "mail.messages.write"
+            ]
+          }
+        ]
+      }
+    },
+    "/v1/folders/{folder_id}/messages/move": {
+      "post": {
+        "operationId": "mailMoveMessages",
+        "summary": "Move messages",
+        "description": "Moves a batch of messages from one folder to another.",
+        "tags": [
+          "mail"
+        ],
+        "parameters": [
+          {
+            "name": "folder_id",
+            "in": "path",
+            "required": true,
+            "description": "Where the messages are now.",
+            "schema": {
+              "type": "string",
+              "description": "Where the messages are now."
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "message_ids": {
+                    "type": "array",
+                    "description": "The messages to move.",
+                    "items": {
+                      "type": "string"
+                    }
+                  },
+                  "to_folder_id": {
+                    "type": "string",
+                    "description": "Where they are going."
+                  }
+                },
+                "required": [
+                  "message_ids",
+                  "to_folder_id"
+                ],
+                "additionalProperties": false
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "data": {
+                      "type": "object",
+                      "additionalProperties": false
+                    },
+                    "meta": {
+                      "$ref": "#/components/schemas/Meta"
+                    }
+                  },
+                  "required": [
+                    "data",
+                    "meta"
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "The credential is missing, malformed, or not one this API issues.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "The key is valid but was not granted a permission this endpoint needs.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such record, or it belongs to another workspace.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "The plan's rate limit or daily quota is spent. See RateLimit-Reset.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Something failed on our side. The request id in the body identifies it.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "apiKey": [
+              "mail.messages.write"
+            ]
+          }
+        ]
+      }
+    },
+    "/v1/folders/{id}": {
+      "patch": {
+        "operationId": "mailUpdateFolder",
+        "summary": "Rename a mail folder",
+        "description": "Renames or moves a folder.\n\nSend only what changes. Fields you omit are left alone.",
+        "tags": [
+          "mail"
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "description": "The folder to change.",
+            "schema": {
+              "type": "string",
+              "description": "The folder to change."
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "name": {
+                    "type": "string",
+                    "description": "A new name. Renaming does not move the messages."
+                  },
+                  "parent_id": {
+                    "type": "string",
+                    "description": "Moves the folder, and everything in it, under another."
+                  }
+                },
+                "additionalProperties": false
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "data": {
+                      "type": "object",
+                      "additionalProperties": false
+                    },
+                    "meta": {
+                      "$ref": "#/components/schemas/Meta"
+                    }
+                  },
+                  "required": [
+                    "data",
+                    "meta"
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "The credential is missing, malformed, or not one this API issues.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "The key is valid but was not granted a permission this endpoint needs.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such record, or it belongs to another workspace.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "The plan's rate limit or daily quota is spent. See RateLimit-Reset.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Something failed on our side. The request id in the body identifies it.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "apiKey": [
+              "mail.folders.write"
+            ]
+          }
+        ]
+      },
+      "delete": {
+        "operationId": "mailDeleteFolder",
+        "summary": "Delete a mail folder",
+        "description": "Deletes a folder and everything in it.\n\nDeletes the folder and every message in it. Nothing moves to Trash first and there is no undo, so move anything worth keeping before calling this.",
+        "tags": [
+          "mail"
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "description": "The folder to delete.",
+            "schema": {
+              "type": "string",
+              "description": "The folder to delete."
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Success.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "data": {
+                      "type": "object",
+                      "additionalProperties": false
+                    },
+                    "meta": {
+                      "$ref": "#/components/schemas/Meta"
+                    }
+                  },
+                  "required": [
+                    "data",
+                    "meta"
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "The credential is missing, malformed, or not one this API issues.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "The key is valid but was not granted a permission this endpoint needs.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such record, or it belongs to another workspace.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "The plan's rate limit or daily quota is spent. See RateLimit-Reset.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Something failed on our side. The request id in the body identifies it.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "apiKey": [
+              "mail.folders.write"
+            ]
+          }
+        ]
+      }
+    },
+    "/v1/freebusy": {
+      "post": {
+        "operationId": "calendarFreebusy",
+        "summary": "Query free/busy",
+        "description": "Returns busy intervals for a set of people and rooms over a time range.\n\nReturns busy intervals, never what the meetings are.",
+        "tags": [
+          "calendar"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "attendees": {
+                    "type": "array",
+                    "description": "Addresses to check. Required unless resources is given.",
+                    "items": {
+                      "type": "string"
+                    }
+                  },
+                  "end": {
+                    "type": "string",
+                    "format": "date-time"
+                  },
+                  "resources": {
+                    "type": "array",
+                    "description": "Room or equipment ids. Required unless attendees is given.",
+                    "items": {
+                      "type": "string"
+                    }
+                  },
+                  "start": {
+                    "type": "string",
+                    "format": "date-time"
+                  }
+                },
+                "required": [
+                  "start",
+                  "end"
+                ],
+                "additionalProperties": false
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "attendees": {
+                          "type": "array",
+                          "description": "One entry per address asked about.",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "busy": {
+                                "type": "array",
+                                "description": "Intervals they are not free.",
+                                "items": {
+                                  "type": "object",
+                                  "properties": {
+                                    "ends_at": {
+                                      "type": "string",
+                                      "format": "date-time"
+                                    },
+                                    "starts_at": {
+                                      "type": "string",
+                                      "format": "date-time"
+                                    }
+                                  },
+                                  "additionalProperties": false
+                                }
+                              },
+                              "email": {
+                                "type": "string"
+                              }
+                            },
+                            "additionalProperties": false
+                          }
+                        },
+                        "unknown_attendees": {
+                          "type": "array",
+                          "description": "Addresses outside this workspace. Not free — unknown, which is different, and treating them as free is how a meeting gets booked over someone.",
+                          "items": {
+                            "type": "string"
+                          }
+                        }
+                      },
+                      "additionalProperties": false
+                    },
+                    "meta": {
+                      "$ref": "#/components/schemas/Meta"
+                    }
+                  },
+                  "required": [
+                    "data",
+                    "meta"
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "The credential is missing, malformed, or not one this API issues.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "The key is valid but was not granted a permission this endpoint needs.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "The plan's rate limit or daily quota is spent. See RateLimit-Reset.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Something failed on our side. The request id in the body identifies it.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "apiKey": [
+              "calendar.freebusy.read"
+            ]
+          }
+        ]
+      }
+    },
+    "/v1/freebusy/find": {
+      "post": {
+        "operationId": "calendarFindSlots",
+        "summary": "Find a time that works",
+        "description": "Asks the scheduler for open slots that suit everyone, instead of returning busy intervals to reconcile by hand.\n\nAsks for times that suit everyone, rather than returning busy intervals for you to reconcile by hand.",
+        "tags": [
+          "calendar"
+        ],
+        "responses": {
+          "200": {
+            "description": "Success.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "data": {
+                      "type": "object",
+                      "additionalProperties": false
+                    },
+                    "meta": {
+                      "$ref": "#/components/schemas/Meta"
+                    }
+                  },
+                  "required": [
+                    "data",
+                    "meta"
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "The credential is missing, malformed, or not one this API issues.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "The key is valid but was not granted a permission this endpoint needs.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "The plan's rate limit or daily quota is spent. See RateLimit-Reset.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Something failed on our side. The request id in the body identifies it.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "apiKey": [
+              "calendar.freebusy.read"
+            ]
+          }
+        ]
+      }
+    },
+    "/v1/mail/filters": {
+      "get": {
+        "operationId": "mailListFilters",
+        "summary": "List mail filters",
+        "description": "Lists the rules applied to incoming mail.\n\nRules applied to incoming mail, in priority order.",
+        "tags": [
+          "mail"
+        ],
+        "responses": {
+          "200": {
+            "description": "Success.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "enabled": {
+                          "type": "boolean"
+                        },
+                        "id": {
+                          "type": "string"
+                        },
+                        "name": {
+                          "type": "string"
+                        },
+                        "priority": {
+                          "type": "integer",
+                          "description": "Lower numbers run first."
+                        },
+                        "rule": {
+                          "type": "object",
+                          "description": "What the rule matches and what it does.",
+                          "properties": {
+                            "actions": {
+                              "type": "array",
+                              "description": "What to do when it matches. At least one.",
+                              "items": {
+                                "type": "object",
+                                "properties": {
+                                  "flag": {
+                                    "type": "string",
+                                    "description": "Required for set_flag."
+                                  },
+                                  "folder": {
+                                    "type": "string",
+                                    "description": "Required for move. The folder is created if it does not exist."
+                                  },
+                                  "type": {
+                                    "type": "string",
+                                    "enum": [
+                                      "move",
+                                      "set_flag",
+                                      "mark_read",
+                                      "mark_unread",
+                                      "discard"
+                                    ]
+                                  }
+                                },
+                                "required": [
+                                  "type"
+                                ],
+                                "additionalProperties": false
+                              }
+                            },
+                            "conditions": {
+                              "type": "array",
+                              "description": "What to test. At least one.",
+                              "items": {
+                                "type": "object",
+                                "properties": {
+                                  "field": {
+                                    "type": "string",
+                                    "description": "Or header:\u003cname\u003e, for example header:list-id.",
+                                    "enum": [
+                                      "from",
+                                      "to",
+                                      "cc",
+                                      "subject",
+                                      "body"
+                                    ]
+                                  },
+                                  "op": {
+                                    "type": "string",
+                                    "description": "Matching ignores case. regex is reserved and refused.",
+                                    "enum": [
+                                      "contains",
+                                      "equals",
+                                      "starts_with",
+                                      "ends_with"
+                                    ]
+                                  },
+                                  "value": {
+                                    "type": "string",
+                                    "description": "What to look for."
+                                  }
+                                },
+                                "required": [
+                                  "field",
+                                  "op",
+                                  "value"
+                                ],
+                                "additionalProperties": false
+                              }
+                            },
+                            "match": {
+                              "type": "string",
+                              "description": "all requires every condition; any requires one. Defaults to all.",
+                              "enum": [
+                                "all",
+                                "any"
+                              ]
+                            }
+                          },
+                          "required": [
+                            "conditions",
+                            "actions"
+                          ],
+                          "additionalProperties": false
+                        }
+                      },
+                      "additionalProperties": false
+                    },
+                    "meta": {
+                      "$ref": "#/components/schemas/Meta"
+                    }
+                  },
+                  "required": [
+                    "data",
+                    "meta"
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "The credential is missing, malformed, or not one this API issues.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "The key is valid but was not granted a permission this endpoint needs.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "The plan's rate limit or daily quota is spent. See RateLimit-Reset.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Something failed on our side. The request id in the body identifies it.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "apiKey": [
+              "mail.settings.read"
+            ]
+          }
+        ]
+      },
+      "post": {
+        "operationId": "mailCreateFilter",
+        "summary": "Create a mail filter",
+        "description": "Adds a rule applied to incoming mail.\n\nRules run in priority order, lowest first, and every matching rule contributes. discard wins if any rule sets it; move takes the folder from the last matching rule that names one; flag actions accumulate.",
+        "tags": [
+          "mail"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "enabled": {
+                    "type": "boolean",
+                    "description": "Defaults to true."
+                  },
+                  "name": {
+                    "type": "string",
+                    "description": "A label for you, not used in matching."
+                  },
+                  "priority": {
+                    "type": "integer",
+                    "description": "Lower numbers run first."
+                  },
+                  "rule": {
+                    "type": "object",
+                    "description": "What to match, and what to do about it.",
+                    "properties": {
+                      "actions": {
+                        "type": "array",
+                        "description": "What to do when it matches. At least one.",
+                        "items": {
+                          "type": "object",
+                          "properties": {
+                            "flag": {
+                              "type": "string",
+                              "description": "Required for set_flag."
+                            },
+                            "folder": {
+                              "type": "string",
+                              "description": "Required for move. The folder is created if it does not exist."
+                            },
+                            "type": {
+                              "type": "string",
+                              "enum": [
+                                "move",
+                                "set_flag",
+                                "mark_read",
+                                "mark_unread",
+                                "discard"
+                              ]
+                            }
+                          },
+                          "required": [
+                            "type"
+                          ],
+                          "additionalProperties": false
+                        }
+                      },
+                      "conditions": {
+                        "type": "array",
+                        "description": "What to test. At least one.",
+                        "items": {
+                          "type": "object",
+                          "properties": {
+                            "field": {
+                              "type": "string",
+                              "description": "Or header:\u003cname\u003e, for example header:list-id.",
+                              "enum": [
+                                "from",
+                                "to",
+                                "cc",
+                                "subject",
+                                "body"
+                              ]
+                            },
+                            "op": {
+                              "type": "string",
+                              "description": "Matching ignores case. regex is reserved and refused.",
+                              "enum": [
+                                "contains",
+                                "equals",
+                                "starts_with",
+                                "ends_with"
+                              ]
+                            },
+                            "value": {
+                              "type": "string",
+                              "description": "What to look for."
+                            }
+                          },
+                          "required": [
+                            "field",
+                            "op",
+                            "value"
+                          ],
+                          "additionalProperties": false
+                        }
+                      },
+                      "match": {
+                        "type": "string",
+                        "description": "all requires every condition; any requires one. Defaults to all.",
+                        "enum": [
+                          "all",
+                          "any"
+                        ]
+                      }
+                    },
+                    "required": [
+                      "conditions",
+                      "actions"
+                    ],
+                    "additionalProperties": false
+                  }
+                },
+                "required": [
+                  "name",
+                  "priority",
+                  "rule"
+                ],
+                "additionalProperties": false
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Success.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "data": {
+                      "type": "object",
+                      "additionalProperties": false
+                    },
+                    "meta": {
+                      "$ref": "#/components/schemas/Meta"
+                    }
+                  },
+                  "required": [
+                    "data",
+                    "meta"
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "The credential is missing, malformed, or not one this API issues.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "The key is valid but was not granted a permission this endpoint needs.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "The plan's rate limit or daily quota is spent. See RateLimit-Reset.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Something failed on our side. The request id in the body identifies it.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "apiKey": [
+              "mail.settings.write"
+            ]
+          }
+        ]
+      }
+    },
+    "/v1/mail/filters/{id}": {
+      "delete": {
+        "operationId": "mailDeleteFilter",
+        "summary": "Delete a mail filter",
+        "description": "Removes a rule.",
+        "tags": [
+          "mail"
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "description": "The rule to remove.",
+            "schema": {
+              "type": "string",
+              "description": "The rule to remove."
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Success.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "data": {
+                      "type": "object",
+                      "additionalProperties": false
+                    },
+                    "meta": {
+                      "$ref": "#/components/schemas/Meta"
+                    }
+                  },
+                  "required": [
+                    "data",
+                    "meta"
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "The credential is missing, malformed, or not one this API issues.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "The key is valid but was not granted a permission this endpoint needs.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such record, or it belongs to another workspace.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "The plan's rate limit or daily quota is spent. See RateLimit-Reset.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Something failed on our side. The request id in the body identifies it.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "apiKey": [
+              "mail.settings.write"
+            ]
+          }
+        ]
+      }
+    },
+    "/v1/mail/settings": {
+      "get": {
+        "operationId": "mailGetSettings",
+        "summary": "Get display preferences",
+        "description": "Returns how dates, times and the calendar are shown: time format, week start, default view and event length.\n\nAlways returns a complete document: stored values overlaid on defaults, so there is no empty state to handle and no 404 for a mailbox that has never changed anything.",
+        "tags": [
+          "mail"
+        ],
+        "responses": {
+          "200": {
+            "description": "Success.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "date_format": {
+                          "type": "string",
+                          "enum": [
+                            "auto",
+                            "dmy",
+                            "mdy",
+                            "ymd"
+                          ]
+                        },
+                        "default_event_minutes": {
+                          "type": "integer",
+                          "description": "How long a new event is when no end is given."
+                        },
+                        "default_reminder_minutes": {
+                          "type": "integer",
+                          "description": "Minutes before an event to remind. 0 means at the start."
+                        },
+                        "default_view": {
+                          "type": "string",
+                          "enum": [
+                            "day",
+                            "week",
+                            "month",
+                            "agenda"
+                          ]
+                        },
+                        "speedy_meetings": {
+                          "type": "boolean",
+                          "description": "Ends events a few minutes early so back-to-back meetings have a gap."
+                        },
+                        "time_format": {
+                          "type": "string",
+                          "description": "auto follows the browser or client.",
+                          "enum": [
+                            "auto",
+                            "12",
+                            "24"
+                          ]
+                        },
+                        "timezone": {
+                          "type": "string",
+                          "description": "An IANA name such as Europe/Vilnius. Empty means the client decides."
+                        },
+                        "week_start": {
+                          "type": "integer",
+                          "description": "0 is Sunday through 6 is Saturday."
+                        }
+                      },
+                      "additionalProperties": false
+                    },
+                    "meta": {
+                      "$ref": "#/components/schemas/Meta"
+                    }
+                  },
+                  "required": [
+                    "data",
+                    "meta"
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "The credential is missing, malformed, or not one this API issues.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "The key is valid but was not granted a permission this endpoint needs.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "The plan's rate limit or daily quota is spent. See RateLimit-Reset.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Something failed on our side. The request id in the body identifies it.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "apiKey": [
+              "mail.settings.read"
+            ]
+          }
+        ]
+      },
+      "patch": {
+        "operationId": "mailUpdateSettings",
+        "summary": "Update display preferences",
+        "description": "Changes how dates, times and the calendar are shown.\n\nSend only what changes. A body with no recognised field is rejected rather than treated as a no-op, so a typo in a field name is reported instead of silently doing nothing.",
+        "tags": [
+          "mail"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "date_format": {
+                    "type": "string",
+                    "enum": [
+                      "auto",
+                      "dmy",
+                      "mdy",
+                      "ymd"
+                    ]
+                  },
+                  "default_event_minutes": {
+                    "type": "integer",
+                    "description": "Must be greater than zero."
+                  },
+                  "default_reminder_minutes": {
+                    "type": "integer",
+                    "description": "Zero or more."
+                  },
+                  "default_view": {
+                    "type": "string",
+                    "enum": [
+                      "day",
+                      "week",
+                      "month",
+                      "agenda"
+                    ]
+                  },
+                  "speedy_meetings": {
+                    "type": "boolean"
+                  },
+                  "time_format": {
+                    "type": "string",
+                    "enum": [
+                      "auto",
+                      "12",
+                      "24"
+                    ]
+                  },
+                  "timezone": {
+                    "type": "string",
+                    "description": "A valid IANA name, or empty to let the client decide."
+                  },
+                  "week_start": {
+                    "type": "integer",
+                    "description": "0 to 6. Anything else is rejected."
+                  }
+                },
+                "additionalProperties": false
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "data": {
+                      "type": "object",
+                      "additionalProperties": false
+                    },
+                    "meta": {
+                      "$ref": "#/components/schemas/Meta"
+                    }
+                  },
+                  "required": [
+                    "data",
+                    "meta"
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "The credential is missing, malformed, or not one this API issues.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "The key is valid but was not granted a permission this endpoint needs.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "The plan's rate limit or daily quota is spent. See RateLimit-Reset.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Something failed on our side. The request id in the body identifies it.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "apiKey": [
+              "mail.settings.write"
+            ]
+          }
+        ]
+      }
+    },
+    "/v1/messages": {
+      "get": {
+        "operationId": "mailListMessages",
+        "summary": "List messages",
+        "description": "Lists message summaries in a folder, newest first, with cursor pagination.\n\nAt least one of folder_id, flag, label or unread is required. An unfiltered list would be the whole mailbox, so it is refused rather than quietly narrowed to the inbox. Recipients are not on the summary; fetch the message for to and cc.",
+        "tags": [
+          "mail"
+        ],
+        "parameters": [
+          {
+            "name": "folder_id",
+            "in": "query",
+            "description": "Limit to one folder. Repeat it for several.",
+            "schema": {
+              "type": "string",
+              "description": "Limit to one folder. Repeat it for several."
+            }
+          },
+          {
+            "name": "flag",
+            "in": "query",
+            "description": "Only messages carrying all the flags listed. Repeat for several.",
+            "schema": {
+              "type": "string",
+              "description": "Only messages carrying all the flags listed. Repeat for several.",
+              "enum": [
+                "read",
+                "starred",
+                "answered",
+                "draft",
+                "deleted"
+              ]
+            }
+          },
+          {
+            "name": "label",
+            "in": "query",
+            "description": "Only messages carrying this user-defined label. Repeat for several.",
+            "schema": {
+              "type": "string",
+              "description": "Only messages carrying this user-defined label. Repeat for several."
+            }
+          },
+          {
+            "name": "unread",
+            "in": "query",
+            "description": "Only messages without the read flag.",
+            "schema": {
+              "type": "boolean",
+              "description": "Only messages without the read flag."
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "description": "Rows in this page, 1 to 200.",
+            "schema": {
+              "type": "integer",
+              "description": "Rows in this page, 1 to 200. Defaults to 50."
+            }
+          },
+          {
+            "name": "cursor",
+            "in": "query",
+            "description": "The next_cursor from the previous page.",
+            "schema": {
+              "type": "string",
+              "description": "The next_cursor from the previous page."
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "date": {
+                          "type": "string",
+                          "format": "date-time",
+                          "description": "When the server received it, not when the sender wrote it."
+                        },
+                        "flags": {
+                          "type": "object",
+                          "description": "Which system flags the message carries.",
+                          "properties": {
+                            "answered": {
+                              "type": "boolean",
+                              "description": "Set automatically when you reply through this API."
+                            },
+                            "deleted": {
+                              "type": "boolean",
+                              "description": "Marked for removal but still present until the folder is expunged."
+                            },
+                            "draft": {
+                              "type": "boolean"
+                            },
+                            "read": {
+                              "type": "boolean",
+                              "description": "The IMAP Seen flag. Absent means unread."
+                            },
+                            "starred": {
+                              "type": "boolean",
+                              "description": "The IMAP Flagged bit. One star, not a colour."
+                            }
+                          },
+                          "additionalProperties": false
+                        },
+                        "folder_id": {
+                          "type": "string",
+                          "description": "Where the message is now. Needed to change its flags or move it."
+                        },
+                        "from": {
+                          "type": "string",
+                          "description": "The sender, as written on the message: \"Name \u003caddress\u003e\"."
+                        },
+                        "id": {
+                          "type": "string",
+                          "description": "Use this wherever an endpoint takes a message id."
+                        },
+                        "labels": {
+                          "type": "array",
+                          "description": "User-defined labels. Empty rather than absent when there are none.",
+                          "items": {
+                            "type": "string"
+                          }
+                        },
+                        "message_id": {
+                          "type": "string",
+                          "description": "The RFC 5322 Message-Id header, for threading a reply."
+                        },
+                        "size": {
+                          "type": "integer",
+                          "description": "Bytes of the whole message, including attachments."
+                        },
+                        "subject": {
+                          "type": "string"
+                        },
+                        "thread_id": {
+                          "type": "string",
+                          "description": "Groups a conversation. Absent on mail that predates threading, so do not treat missing as a thread of one."
+                        }
+                      },
+                      "additionalProperties": false
+                    },
+                    "meta": {
+                      "$ref": "#/components/schemas/Meta"
+                    }
+                  },
+                  "required": [
+                    "data",
+                    "meta"
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "The credential is missing, malformed, or not one this API issues.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "The key is valid but was not granted a permission this endpoint needs.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "The plan's rate limit or daily quota is spent. See RateLimit-Reset.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Something failed on our side. The request id in the body identifies it.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "apiKey": [
+              "mail.messages.read"
+            ]
+          }
+        ]
+      }
+    },
+    "/v1/messages/send": {
+      "post": {
+        "operationId": "mailSendMessage",
+        "summary": "Send an email",
+        "description": "Sends mail from the workspace user the key acts as. Requires mail.send, which is deliberately separate from mail.messages.write.\n\nAnswers 202, not 200: the message is queued and archived in Sent, and delivery happens afterwards. A 202 does not mean it arrived, and this API cannot tell you that it did.",
+        "tags": [
+          "mail"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "attachments": {
+                    "type": "array",
+                    "description": "Files to send along with the message.",
+                    "items": {
+                      "type": "object",
+                      "properties": {
+                        "content_base64": {
+                          "type": "string",
+                          "description": "The file, base64 encoded. Padded or not, standard or URL-safe."
+                        },
+                        "content_id": {
+                          "type": "string",
+                          "description": "Required when inline is true. The HTML refers to it as src=\"cid:the-id\"."
+                        },
+                        "content_type": {
+                          "type": "string",
+                          "description": "For example application/pdf."
+                        },
+                        "filename": {
+                          "type": "string",
+                          "description": "As the recipient will see it."
+                        },
+                        "inline": {
+                          "type": "boolean",
+                          "description": "True for an image the HTML body displays rather than a file to download. Defaults to false."
+                        }
+                      },
+                      "required": [
+                        "filename",
+                        "content_type",
+                        "content_base64"
+                      ],
+                      "additionalProperties": false
+                    }
+                  },
+                  "from": {
+                    "type": "string",
+                    "description": "Any address you may send as: an alias, or a list you are an authorised sender of. Anything else is refused. Defaults to your mailbox address."
+                  },
+                  "html": {
+                    "type": "string",
+                    "description": "HTML body, sanitised before sending. Required unless text is given."
+                  },
+                  "in_reply_to": {
+                    "type": "string",
+                    "description": "The parent's message_id, angle brackets included. The References chain is built for you."
+                  },
+                  "subject": {
+                    "type": "string"
+                  },
+                  "text": {
+                    "type": "string",
+                    "description": "Plain-text body. Required unless html is given."
+                  },
+                  "to": {
+                    "type": "array",
+                    "description": "Recipients. At least one.",
+                    "items": {
+                      "type": "string"
+                    }
+                  }
+                },
+                "required": [
+                  "to",
+                  "subject"
+                ],
+                "additionalProperties": false
+              }
+            }
+          }
+        },
+        "responses": {
+          "202": {
+            "description": "Success.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "message_id": {
+                          "type": "string",
+                          "description": "The Message-Id assigned to the sent mail."
+                        },
+                        "queued": {
+                          "type": "integer",
+                          "description": "How many queue entries were created."
+                        },
+                        "status": {
+                          "type": "string",
+                          "enum": [
+                            "queued"
+                          ]
+                        }
+                      },
+                      "additionalProperties": false
+                    },
+                    "meta": {
+                      "$ref": "#/components/schemas/Meta"
+                    }
+                  },
+                  "required": [
+                    "data",
+                    "meta"
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "The credential is missing, malformed, or not one this API issues.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "The key is valid but was not granted a permission this endpoint needs.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "The plan's rate limit or daily quota is spent. See RateLimit-Reset.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Something failed on our side. The request id in the body identifies it.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "apiKey": [
+              "mail.send"
+            ]
+          }
+        ]
+      }
+    },
+    "/v1/messages/{id}": {
+      "get": {
+        "operationId": "mailGetMessage",
+        "summary": "Get a message",
+        "description": "Returns one message with its headers, body and attachment metadata.\n\nThe message is parsed here: MIME traversal, transfer decoding and RFC 2047 header decoding are done for you. Attachment bytes are a separate call, so reading a message never pulls a large file through the response.",
+        "tags": [
+          "mail"
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "description": "The message to read.",
+            "schema": {
+              "type": "string",
+              "description": "The message to read."
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "attachments": {
+                          "type": "array",
+                          "description": "What is attached. Fetch the bytes separately.",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "content_type": {
+                                "type": "string"
+                              },
+                              "filename": {
+                                "type": "string"
+                              },
+                              "inline": {
+                                "type": "boolean",
+                                "description": "True for an image the HTML body refers to rather than a file attached to it."
+                              },
+                              "part_id": {
+                                "type": "string",
+                                "description": "Pass this as :part to download the bytes."
+                              },
+                              "size": {
+                                "type": "integer",
+                                "description": "Bytes after decoding, not the encoded length on the wire."
+                              }
+                            },
+                            "additionalProperties": false
+                          }
+                        },
+                        "cc": {
+                          "type": "array",
+                          "description": "Copied recipients.",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "email": {
+                                "type": "string",
+                                "description": "The address itself."
+                              },
+                              "name": {
+                                "type": "string",
+                                "description": "The display name, when the message carried one."
+                              }
+                            },
+                            "additionalProperties": false
+                          }
+                        },
+                        "date": {
+                          "type": "string",
+                          "description": "The Date header as the sender wrote it, timezone included."
+                        },
+                        "from": {
+                          "type": "object",
+                          "description": "The sender, parsed apart.",
+                          "properties": {
+                            "email": {
+                              "type": "string",
+                              "description": "The address itself."
+                            },
+                            "name": {
+                              "type": "string",
+                              "description": "The display name, when the message carried one."
+                            }
+                          },
+                          "additionalProperties": false
+                        },
+                        "headers": {
+                          "type": "object",
+                          "description": "Every header not lifted into a field above, so nothing is lost."
+                        },
+                        "html": {
+                          "type": "string",
+                          "description": "The HTML body. Absent when the message has none."
+                        },
+                        "subject": {
+                          "type": "string"
+                        },
+                        "text": {
+                          "type": "string",
+                          "description": "The plain-text body. Absent when the message has none."
+                        },
+                        "to": {
+                          "type": "array",
+                          "description": "Recipients.",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "email": {
+                                "type": "string",
+                                "description": "The address itself."
+                              },
+                              "name": {
+                                "type": "string",
+                                "description": "The display name, when the message carried one."
+                              }
+                            },
+                            "additionalProperties": false
+                          }
+                        }
+                      },
+                      "additionalProperties": false
+                    },
+                    "meta": {
+                      "$ref": "#/components/schemas/Meta"
+                    }
+                  },
+                  "required": [
+                    "data",
+                    "meta"
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "The credential is missing, malformed, or not one this API issues.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "The key is valid but was not granted a permission this endpoint needs.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such record, or it belongs to another workspace.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "The plan's rate limit or daily quota is spent. See RateLimit-Reset.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Something failed on our side. The request id in the body identifies it.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "apiKey": [
+              "mail.messages.read"
+            ]
+          }
+        ]
+      },
+      "delete": {
+        "operationId": "mailDeleteMessage",
+        "summary": "Delete a message",
+        "description": "Moves a message to Trash, or deletes it permanently.",
+        "tags": [
+          "mail"
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "description": "The message to delete.",
+            "schema": {
+              "type": "string",
+              "description": "The message to delete."
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Success.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "data": {
+                      "type": "object",
+                      "additionalProperties": false
+                    },
+                    "meta": {
+                      "$ref": "#/components/schemas/Meta"
+                    }
+                  },
+                  "required": [
+                    "data",
+                    "meta"
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "The credential is missing, malformed, or not one this API issues.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "The key is valid but was not granted a permission this endpoint needs.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such record, or it belongs to another workspace.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "The plan's rate limit or daily quota is spent. See RateLimit-Reset.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Something failed on our side. The request id in the body identifies it.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "apiKey": [
+              "mail.messages.write"
+            ]
+          }
+        ]
+      }
+    },
+    "/v1/messages/{id}/attachments": {
+      "get": {
+        "operationId": "mailListAttachments",
+        "summary": "List attachments",
+        "description": "Lists the attachments on a message with their sizes and content types.",
+        "tags": [
+          "mail"
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "description": "The message whose parts to list.",
+            "schema": {
+              "type": "string",
+              "description": "The message whose parts to list."
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "content_type": {
+                          "type": "string"
+                        },
+                        "filename": {
+                          "type": "string"
+                        },
+                        "inline": {
+                          "type": "boolean",
+                          "description": "True for an image the HTML body refers to rather than a file attached to it."
+                        },
+                        "part_id": {
+                          "type": "string",
+                          "description": "Pass this as :part to download the bytes."
+                        },
+                        "size": {
+                          "type": "integer",
+                          "description": "Bytes after decoding, not the encoded length on the wire."
+                        }
+                      },
+                      "additionalProperties": false
+                    },
+                    "meta": {
+                      "$ref": "#/components/schemas/Meta"
+                    }
+                  },
+                  "required": [
+                    "data",
+                    "meta"
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "The credential is missing, malformed, or not one this API issues.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "The key is valid but was not granted a permission this endpoint needs.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such record, or it belongs to another workspace.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "The plan's rate limit or daily quota is spent. See RateLimit-Reset.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Something failed on our side. The request id in the body identifies it.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "apiKey": [
+              "mail.messages.read"
+            ]
+          }
+        ]
+      }
+    },
+    "/v1/messages/{id}/attachments/{part}": {
+      "get": {
+        "operationId": "mailGetAttachment",
+        "summary": "Download an attachment",
+        "description": "Streams one attachment. Subject to the documented proxy size cap.\n\nReturns the file itself, not JSON, with the attachment's own content type. Always served as a download rather than inline, so HTML someone was emailed cannot render on this origin.",
+        "tags": [
+          "mail"
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "description": "The message.",
+            "schema": {
+              "type": "string",
+              "description": "The message."
+            }
+          },
+          {
+            "name": "part",
+            "in": "path",
+            "required": true,
+            "description": "The part_id from the attachment list.",
+            "schema": {
+              "type": "string",
+              "description": "The part_id from the attachment list."
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "data": {
+                      "type": "object",
+                      "additionalProperties": false
+                    },
+                    "meta": {
+                      "$ref": "#/components/schemas/Meta"
+                    }
+                  },
+                  "required": [
+                    "data",
+                    "meta"
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "The credential is missing, malformed, or not one this API issues.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "The key is valid but was not granted a permission this endpoint needs.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such record, or it belongs to another workspace.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "The plan's rate limit or daily quota is spent. See RateLimit-Reset.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Something failed on our side. The request id in the body identifies it.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "apiKey": [
+              "mail.messages.read"
+            ]
+          }
+        ]
+      }
+    }
+  },
+  "components": {
+    "securitySchemes": {
+      "apiKey": {
+        "type": "http",
+        "scheme": "bearer",
+        "bearerFormat": "vak_live_\u003cid\u003e_\u003csecret\u003e",
+        "description": "A key created at veruapis.com. VeruSuite credentials are not accepted here: a suite JWT, a personal API token or a session cookie is refused."
+      }
+    },
+    "schemas": {
+      "Error": {
+        "type": "object",
+        "description": "Every failure uses this shape.",
+        "properties": {
+          "error": {
+            "type": "object",
+            "properties": {
+              "code": {
+                "type": "string",
+                "description": "A stable identifier for the failure. Branch on this, never on the message, which is written for a person and may change."
+              },
+              "details": {
+                "type": "array",
+                "description": "Which fields were wrong, when that is the reason.",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "field": {
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    }
+                  }
+                }
+              },
+              "message": {
+                "type": "string"
+              },
+              "request_id": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "code",
+              "message",
+              "request_id"
+            ]
+          }
+        },
+        "required": [
+          "error"
+        ]
+      },
+      "Meta": {
+        "type": "object",
+        "description": "Present on every response.",
+        "properties": {
+          "request_id": {
+            "type": "string",
+            "description": "Quote this when reporting a problem."
+          },
+          "timestamp": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "request_id",
+          "timestamp"
+        ]
+      }
+    }
+  }
+}

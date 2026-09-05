@@ -1,53 +1,109 @@
 # veruapis (Go)
 
-Not written yet.
+Client for the VeruSuite API: mail, calendar and workspace administration.
 
-## What it will be
+```bash
+go get github.com/verusuite/veruapis-sdk/go
+```
 
-The same shape as [`../node`](../node): a hand-written client over the API
-described in [`../spec/openapi.yaml`](../spec/openapi.yaml). No generated code.
+Needs Go 1.23 or later, for range-over-func. No dependencies outside the
+standard library: every dependency in a client library becomes one in every
+program that imports it.
+
+## Use
 
 ```go
 api := veruapis.New(os.Getenv("VERUAPIS_KEY"))
 
 folders, err := api.Mail.ListFolders(ctx)
-if err != nil {
-    var apiErr *veruapis.Error
-    if errors.As(err, &apiErr) && apiErr.IsPermissionProblem() {
-        log.Fatalf("this key is missing %s", apiErr.Code)
-    }
-}
+
+_, err = api.Mail.Send(ctx, veruapis.SendMessage{
+    To:      []string{"ops@example.com"},
+    Subject: "Nightly report",
+    Text:    "All green.",
+})
 ```
-
-The import path is fixed by the repository name and cannot change later without
-breaking every caller:
-
-```
-github.com/verusuite/veruapis-sdk/go
-```
-
-## The bar it has to meet
-
-The same as every other client here, because these are the parts people hit
-rather than the endpoint list:
-
-- **Idempotency.** Every write carries an `Idempotency-Key` unless the caller
-  supplies one. A retry that sends the same email twice is the failure that
-  actually happens.
-- **Retries.** Only `429`, `408` and `5xx`, honouring `Retry-After` when the
-  server sends one and exponential backoff with jitter otherwise. A `400` or a
-  `403` is never retried; it fails the same way every time.
-- **Errors.** One error type carrying the code, status, request id and any
-  field details, reachable through `errors.As`. Callers branch on the code,
-  never on the message.
-- **Paging.** Cursor, never an offset: rows arriving mid-walk shift an offset
-  and a page gets skipped. An iterator, so a caller does not write the loop.
-- **A spec check** that fails when the client calls a route the API does not
-  serve, and warns about endpoints it has not wrapped. See
-  [`../node/scripts/check-spec.mjs`](../node/scripts/check-spec.mjs).
-- **Tests above 95%**, enforced with `go test -cover -coverprofile` and a
-  threshold check so a regression fails CI.
 
 Every call takes a `context.Context`, and the client is safe for concurrent use.
 
-Needs Go 1.22 or later.
+## Errors
+
+```go
+var apiErr *veruapis.Error
+if errors.As(err, &apiErr) && apiErr.IsPermissionProblem() {
+    log.Fatalf("this key is missing %s", apiErr.Code)
+}
+```
+
+Branch on `Code`, never on `Message`. The code is a stable identifier; the
+message is written for a person and may be reworded.
+
+`IsPermissionProblem`, `IsRateLimited`, `IsNotFound` and `IsAuthProblem` cover
+the cases worth handling differently.
+
+## Paging
+
+```go
+for msg, err := range api.Mail.Messages(ctx, veruapis.ListMessagesOptions{
+    FolderID: []string{folderID},
+}) {
+    if err != nil {
+        return err
+    }
+    fmt.Println(msg.Subject)
+}
+```
+
+Cursor rather than an offset: messages arriving mid-walk shift an offset and a
+page gets skipped, which is data loss that looks like nothing at all.
+
+The error is a value in the sequence rather than something returned at the end,
+because a walk that fails on page four has already yielded three and the caller
+needs to know where it stopped.
+
+## What it does for you
+
+- **Idempotency.** Every write carries an `Idempotency-Key` unless you supply
+  one, and the same key survives every retry. A retry that sends the same email
+  twice is the failure that actually happens.
+- **Retries.** Only `429`, `408` and `5xx`, honouring `Retry-After` in seconds
+  or as a date, and exponential backoff with jitter otherwise. A `400` or a
+  `403` is never retried; it fails the same way every time.
+- **Cancellation.** A cancelled context stops the retry loop rather than
+  outliving the caller.
+
+## Anything not wrapped yet
+
+`Do` reaches every endpoint, wrapped or not:
+
+```go
+settings, _, err := veruapis.Do[map[string]any](ctx, api, veruapis.Request{
+    Method: http.MethodGet,
+    Path:   "/v1/mail/settings",
+})
+```
+
+## Options
+
+```go
+api := veruapis.New(key,
+    veruapis.WithBaseURL("https://api.veruapis.com"),
+    veruapis.WithHTTPClient(myClient),  // use your own pooling and timeouts
+    veruapis.WithMaxRetries(0),         // or none at all
+)
+```
+
+## Development
+
+```bash
+go test ./...                                  # includes the spec check
+go test -coverprofile=coverage.out ./...
+go tool cover -html=coverage.out
+```
+
+Types are written by hand. The cost of that is drift, so it is paid for:
+`spec_test.go` calls every method against a recording server and compares the
+routes with `../spec/openapi.json`. A route this client calls that the API does
+not serve fails the build; an endpoint not wrapped yet is reported, not failed.
+
+Coverage is held above 95% by `../scripts/check.ps1`.

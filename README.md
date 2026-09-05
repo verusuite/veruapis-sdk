@@ -48,9 +48,9 @@ than merely nicer.
 |---|---|
 | `spec/openapi.yaml` | The API description. Copied from the server repository at generation time. |
 | `scripts/check.ps1` | Checks every SDK against the specification. |
-| `node/` | TypeScript and JavaScript, published to npm. **The only one written.** |
+| `node/` | TypeScript and JavaScript, for npm. **Written.** |
 | `python/` | Python, for PyPI. Not written yet; the folder holds the brief. |
-| `go/` | Go module. Not written yet; the folder holds the brief. |
+| `go/` | Go module. **Written.** |
 | `dotNet/` | .NET, for NuGet. Not written yet; the folder holds the brief. |
 
 ## After the API changes
@@ -68,7 +68,7 @@ go run .\cmd\veruapis spec ..\veruapis-sdks\spec\openapi.yaml
 |---|---|---|---|
 | Node | Node 18+ | `npm test` | `npm run check-spec` |
 | Python | Python 3.9+ | not written yet | not written yet |
-| Go | Go 1.22+ | not written yet | not written yet |
+| Go | Go 1.23+ | `go test ./...` | included in `go test` |
 | .NET | .NET SDK 8+ | not written yet | not written yet |
 
 No code generator, and therefore no Java. The specification is read by the spec
