@@ -92,6 +92,21 @@ repository root, and the package is in `node/`. That is the one real cost of
 keeping four languages in one repository, and it only applies until the package
 is published. A packed tarball covers the gap in the meantime.
 
+## Tagging a release
+
+Two tags, and both are needed.
+
+```bash
+git tag -a v1.0.0    -m "..."   # the repository, and what npm publishes from
+git tag -a go/v1.0.0 -m "..."   # the Go module
+git push --tags
+```
+
+The Go module lives in a subdirectory, so its version tag has to carry that
+directory as a prefix. A plain `v1.0.0` is invisible to
+`go get github.com/verusuite/veruapis-sdk/go@v1.0.0`, which then falls back to
+a pseudo-version from the default branch and gives no stable release at all.
+
 ## Versioning
 
 SDK versions are independent of the API version. The API is `v1` and stays `v1`;
