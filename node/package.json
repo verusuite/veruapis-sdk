@@ -2,6 +2,17 @@
   "name": "@verusuite/api",
   "version": "0.1.0",
   "description": "Client for the VeruSuite API: mail, calendar and workspace administration.",
+  "license": "MIT",
+  "author": "North Wave MB",
+  "homepage": "https://veruapis.com",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/verusuite/veruapis-sdk.git",
+    "directory": "node"
+  },
+  "bugs": {
+    "url": "https://github.com/verusuite/veruapis-sdk/issues"
+  },
   "type": "module",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
@@ -13,8 +24,10 @@
   },
   "files": [
     "dist",
-    "README.md"
+    "README.md",
+    "LICENSE"
   ],
+  "sideEffects": false,
   "engines": {
     "node": ">=18"
   },
@@ -23,7 +36,8 @@
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "test": "tsx --test test/*.test.ts",
     "coverage": "c8 tsx --test test/*.test.ts",
-    "check-spec": "node scripts/check-spec.mjs"
+    "check-spec": "node scripts/check-spec.mjs",
+    "prepublishOnly": "npm run check-spec && npm run coverage && npm run build"
   },
   "keywords": [
     "verusuite",
@@ -32,7 +46,9 @@
     "calendar",
     "api"
   ],
-  "license": "MIT",
+  "publishConfig": {
+    "access": "public"
+  },
   "devDependencies": {
     "@types/node": "^22.7.0",
     "c8": "^10.1.2",

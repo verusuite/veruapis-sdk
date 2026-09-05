@@ -6,6 +6,15 @@ TypeScript and JavaScript client for the VeruSuite API.
 npm install @verusuite/api
 ```
 
+Installing from the git repository does not work and cannot be made to: npm
+looks for `package.json` at the repository root, and this package lives in
+`node/`. Until it is published, install a packed tarball instead:
+
+```bash
+cd veruapis-sdks/node && npm pack     # builds verusuite-api-<version>.tgz
+npm install ../veruapis-sdks/node/verusuite-api-0.1.0.tgz
+```
+
 ## Use
 
 ```ts

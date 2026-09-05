@@ -74,6 +74,24 @@ go run .\cmd\veruapis spec ..\veruapis-sdks\spec\openapi.yaml
 No code generator, and therefore no Java. The specification is read by the spec
 check, not fed to a generator.
 
+## Publishing
+
+Each language publishes to its own registry, except Go, which resolves straight
+from this repository and needs nothing.
+
+```bash
+cd node && npm publish        # prepublishOnly runs the spec check, coverage and build
+```
+
+`prepublishOnly` is what stops a stale `dist/` shipping: the tarball carries
+whatever was last built, and "whatever was last built" is not a release
+process.
+
+**npm cannot install this from git.** It looks for `package.json` at the
+repository root, and the package is in `node/`. That is the one real cost of
+keeping four languages in one repository, and it only applies until the package
+is published. A packed tarball covers the gap in the meantime.
+
 ## Versioning
 
 SDK versions are independent of the API version. The API is `v1` and stays `v1`;
