@@ -97,5 +97,4 @@ wants to read a licence to call an API. Apache-2.0's explicit patent grant is
 the reason to choose it instead, and is worth revisiting if these ever carry
 more than thin client code.
 
-The copyright line names **VeruSuite**. Replace it with the legal entity before
-publishing.
+Copyright is held by **North Wave MB**.
