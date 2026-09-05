@@ -48,10 +48,10 @@ than merely nicer.
 |---|---|
 | `spec/openapi.yaml` | The API description. Copied from the server repository at generation time. |
 | `scripts/check.ps1` | Checks every SDK against the specification. |
-| `node/` | TypeScript and JavaScript, published to npm. |
-| `python/` | Python, published to PyPI. |
-| `go/` | Go module. |
-| `dotNet/` | .NET, published to NuGet. |
+| `node/` | TypeScript and JavaScript, published to npm. **The only one written.** |
+| `python/` | Python, for PyPI. Not written yet; the folder holds the brief. |
+| `go/` | Go module. Not written yet; the folder holds the brief. |
+| `dotNet/` | .NET, for NuGet. Not written yet; the folder holds the brief. |
 
 ## After the API changes
 
