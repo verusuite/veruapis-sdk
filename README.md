@@ -3,6 +3,16 @@
 Client libraries for [api.veruapis.com](https://api.veruapis.com), in Node,
 Python, Go and .NET.
 
+## Install
+
+```bash
+go get github.com/verusuite/veruapis-sdk/go     # Go 1.23+
+npm install @verusuite/api                      # Node 18+
+```
+
+Python and .NET are not written yet. Until they are, the API is HTTP and JSON
+and `spec/openapi.yaml` describes all of it.
+
 ## How these are built
 
 Everything here derives from `spec/openapi.yaml`, which is itself generated from
@@ -48,9 +58,9 @@ than merely nicer.
 |---|---|
 | `spec/openapi.yaml` | The API description. Copied from the server repository at generation time. |
 | `scripts/check.ps1` | Checks every SDK against the specification. |
-| `node/` | TypeScript and JavaScript, for npm. **Written.** |
+| `node/` | TypeScript and JavaScript. **Published** as `@verusuite/api`. |
 | `python/` | Python, for PyPI. Not written yet; the folder holds the brief. |
-| `go/` | Go module. **Written.** |
+| `go/` | Go module. **Published** as `github.com/verusuite/veruapis-sdk/go`. |
 | `dotNet/` | .NET, for NuGet. Not written yet; the folder holds the brief. |
 
 ## After the API changes
@@ -88,9 +98,10 @@ whatever was last built, and "whatever was last built" is not a release
 process.
 
 **npm cannot install this from git.** It looks for `package.json` at the
-repository root, and the package is in `node/`. That is the one real cost of
-keeping four languages in one repository, and it only applies until the package
-is published. A packed tarball covers the gap in the meantime.
+repository root, and the package is in `node/`. That was the one real cost of
+keeping four languages in one repository, and publishing to npm settled it:
+`npm install @verusuite/api` is the only install anyone needs. Go never had the
+problem, because a module resolves from a subdirectory by path.
 
 ## Tagging a release
 
@@ -123,11 +134,5 @@ can be tied to an exact API description rather than to a date.
 ## Licence
 
 MIT. See [LICENSE](LICENSE).
-
-MIT rather than Apache-2.0 because that is what a client library is expected to
-carry: Stripe, Twilio, SendGrid and Slack all ship theirs under it, and nobody
-wants to read a licence to call an API. Apache-2.0's explicit patent grant is
-the reason to choose it instead, and is worth revisiting if these ever carry
-more than thin client code.
 
 Copyright is held by **North Wave MB**.

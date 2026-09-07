@@ -1,4 +1,4 @@
-# @veruapis/sdk
+# @verusuite/api
 
 TypeScript and JavaScript client for the VeruSuite API.
 
@@ -6,14 +6,17 @@ TypeScript and JavaScript client for the VeruSuite API.
 npm install @verusuite/api
 ```
 
-Installing from the git repository does not work and cannot be made to: npm
-looks for `package.json` at the repository root, and this package lives in
-`node/`. Until it is published, install a packed tarball instead:
+Needs Node 18 or later. The package ships compiled JavaScript alongside its
+type declarations, so a JavaScript project imports it exactly as a TypeScript
+one does and gets the autocomplete anyway. It reaches for no Node built-ins,
+only `fetch` and `AbortController`, so it also runs in Deno, Bun, Cloudflare
+Workers and anything a bundler targets.
 
-```bash
-cd veruapis-sdks/node && npm pack     # builds verusuite-api-<version>.tgz
-npm install ../veruapis-sdks/node/verusuite-api-0.1.0.tgz
-```
+It is a server-side client. An API key in a browser bundle is a key you have
+published.
+
+Install it from npm rather than from git: npm looks for `package.json` at the
+repository root, and this package lives in `node/`.
 
 ## Use
 
