@@ -1,47 +1,139 @@
-# VeruSuite.Api (.NET)
+# VeruSuite.Api
 
-Not written yet.
+.NET client for the VeruSuite API: mail, calendar and workspace
+administration.
 
-## What it will be
+```bash
+dotnet add package VeruSuite.Api
+```
 
-The same shape as [`../node`](../node): a hand-written client over the API
-described in [`../spec/openapi.yaml`](../spec/openapi.yaml). No generated code.
+Targets `net8.0`, the long-term support release, so a consumer who has not
+moved to 10 can still use it. It references no package: every dependency in a
+client library becomes one in every program that installs it, and `HttpClient`
+and `System.Text.Json` are all this needs.
+
+> Not on NuGet yet. Until it is, reference the project directly:
+>
+> ```bash
+> dotnet add reference ../veruapis-sdks/dotNet/src/VeruSuite.Api/VeruSuite.Api.csproj
+> ```
+
+## Use
 
 ```csharp
-var api = new VeruApiClient(Environment.GetEnvironmentVariable("VERUAPIS_KEY"));
+using VeruSuite.Api;
 
-var folders = await api.Mail.ListFoldersAsync();
+using var api = new VeruApiClient(Environment.GetEnvironmentVariable("VERUAPIS_KEY")!);
 
-await api.Mail.SendAsync(new SendMessage {
+foreach (var folder in await api.Mail.ListFoldersAsync())
+    Console.WriteLine($"{folder.Name} {folder.UnreadCount}");
+```
+
+The key acts as the person who created it, limited to the permissions they
+granted. Nothing here widens it.
+
+In a program that already has an `HttpClient`, hand it over. Connection
+pooling, proxies and timeouts are usually decided once for a whole process
+rather than per library, and a supplied client is not disposed by this one:
+
+```csharp
+var api = new VeruApiClient(key, new VeruApiClientOptions { HttpClient = shared });
+```
+
+### Walking a listing
+
+```csharp
+await foreach (var message in api.Mail.MessagesAsync(new() { FolderId = [inbox], Unread = true }))
+    Console.WriteLine(message.Subject);
+```
+
+The cursor is followed for you. Cursor rather than an offset, because messages
+arriving mid-walk shift an offset and a page gets skipped.
+
+### Sending
+
+```csharp
+await api.Mail.SendAsync(new SendMessage
+{
     To = ["ops@example.com"],
     Subject = "Nightly report",
     Text = "All green.",
 });
 ```
 
-## The bar it has to meet
+An `Idempotency-Key` is generated unless you supply one, so a retry cannot send
+the same message twice.
 
-The same as every other client here, because these are the parts people hit
-rather than the endpoint list:
+The API answers 202: the message is queued and archived in Sent, and delivery
+happens afterwards. That is not a promise it arrived, and a failure comes back
+later as a bounce.
 
-- **Idempotency.** Every write carries an `Idempotency-Key` unless the caller
-  supplies one. A retry that sends the same email twice is the failure that
-  actually happens.
-- **Retries.** Only `429`, `408` and `5xx`, honouring `Retry-After` when the
-  server sends one and exponential backoff with jitter otherwise. A `400` or a
-  `403` is never retried; it fails the same way every time.
-- **Errors.** One exception type carrying the code, status, request id and any
-  field details. Callers branch on the code, never on the message.
-- **Paging.** Cursor, never an offset: rows arriving mid-walk shift an offset
-  and a page gets skipped. `IAsyncEnumerable`, so a caller does not write the
-  loop.
-- **A spec check** that fails when the client calls a route the API does not
-  serve, and warns about endpoints it has not wrapped. See
-  [`../node/scripts/check-spec.mjs`](../node/scripts/check-spec.mjs).
-- **Tests above 95%**, enforced with Coverlet thresholds so a regression fails
-  CI.
+### Calendar
 
-Take an `HttpClient` in the constructor rather than creating one, so callers can
-use `IHttpClientFactory` and their own handlers.
+```csharp
+var (events, meta) = await api.Calendar.ListEventsAsync(new()
+{
+    Start = "2026-01-01T00:00:00Z",
+    End = "2026-01-31T23:59:59Z",
+});
 
-Needs the .NET 8 SDK or later. Published to NuGet as `VeruSuite.Api`.
+await api.Calendar.CreateEventAsync("cal_1", new Event
+{
+    Summary = "Standup",
+    StartsAt = "2026-01-02T09:00:00Z",
+    EndsAt = "2026-01-02T09:15:00Z",
+});
+```
+
+Times are UTC. Recurring events arrive already expanded, one entry per
+occurrence, which is why the window is required rather than optional.
+
+Optional fields are nullable, and null means "not set" and is left out of the
+body. That is what makes a partial update partial, and it is also why
+`AllDay = false` can be sent at all: an unset boolean and a deliberate false
+are different requests.
+
+### When it refuses
+
+```csharp
+try
+{
+    await api.Mail.SendAsync(message);
+}
+catch (VeruApiException err) when (err.IsPermissionProblem)
+{
+    Console.Error.WriteLine($"this key is missing {err.Code}");
+}
+```
+
+Branch on `err.Code`, never on `err.Message`. The code is a stable identifier;
+the message is written for a person and may be reworded at any time.
+`IsAuthProblem`, `IsPermissionProblem`, `IsNotFound` and `IsRateLimited` cover
+the four questions worth asking.
+
+429, 408 and 5xx are retried for you, after the delay the server asked for. A
+400 or a 403 is not, because it would fail the same way however many times it
+is sent.
+
+### Anything not wrapped yet
+
+```csharp
+var (settings, meta) = await api.SendAsync<JsonElement>(HttpMethod.Get, "/v1/mail/settings");
+```
+
+The client is allowed to lag the API, and `SendAsync` reaches whatever it has
+not got to.
+
+## Development
+
+```bash
+cd tests/VeruSuite.Api.Tests
+dotnet test
+```
+
+`SpecTests` is the important one: it calls every method against a recording
+handler and fails if any of them asks for a route the API does not serve. That
+is what makes a hand-written client safe rather than merely nicer to read.
+
+Coverage is held at 95% by coverlet, configured in the test project, and
+currently sits at 100% of lines and methods.
