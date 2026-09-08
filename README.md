@@ -10,8 +10,13 @@ go get github.com/verusuite/veruapis-sdk/go     # Go 1.23+
 npm install @verusuite/api                      # Node 18+
 ```
 
-Python and .NET are not written yet. Until they are, the API is HTTP and JSON
-and `spec/openapi.yaml` describes all of it.
+Python and .NET are written but not published yet, so they install from a
+checkout:
+
+```bash
+pip install ./veruapis-sdks/python                                        # Python 3.9+
+dotnet add reference ./veruapis-sdks/dotNet/src/VeruSuite.Api/VeruSuite.Api.csproj
+```
 
 ## How these are built
 
@@ -59,9 +64,10 @@ than merely nicer.
 | `spec/openapi.yaml` | The API description. Copied from the server repository at generation time. |
 | `scripts/check.ps1` | Checks every SDK against the specification. |
 | `node/` | TypeScript and JavaScript. **Published** as `@verusuite/api`. |
-| `python/` | Python, for PyPI. Not written yet; the folder holds the brief. |
+| `python/` | Python. **Written**, not on PyPI yet. |
 | `go/` | Go module. **Published** as `github.com/verusuite/veruapis-sdk/go`. |
-| `dotNet/` | .NET, for NuGet. Not written yet; the folder holds the brief. |
+| `dotNet/` | .NET. **Written**, not on NuGet yet. |
+| `DECISIONS.md` | Why these are the way they are, and what is still open. |
 
 ## After the API changes
 
@@ -77,9 +83,13 @@ go run .\cmd\veruapis spec ..\veruapis-sdks\spec\openapi.yaml
 | Language | Needs | Tests | Spec check |
 |---|---|---|---|
 | Node | Node 18+ | `npm test` | `npm run check-spec` |
-| Python | Python 3.9+ | not written yet | not written yet |
+| Python | Python 3.9+ | `python -m unittest discover -s tests -t tests` | included in the tests |
 | Go | Go 1.23+ | `go test ./...` | included in `go test` |
-| .NET | .NET SDK 8+ | not written yet | not written yet |
+| .NET | .NET SDK 8+ | `dotnet test` | included in the tests |
+
+Three of the four collect the routes they call by running every method against
+a recording transport. Node scans its source instead, which is the approach the
+Go client tried first and abandoned; see D-2 in [DECISIONS.md](DECISIONS.md).
 
 No code generator, and therefore no Java. The specification is read by the spec
 check, not fed to a generator.
@@ -90,8 +100,14 @@ Each language publishes to its own registry, except Go, which resolves straight
 from this repository and needs nothing.
 
 ```bash
-cd node && npm publish        # prepublishOnly runs the spec check, coverage and build
+cd node   && npm publish      # prepublishOnly runs the spec check, coverage and build
+cd python && python -m build  # then twine upload dist/*
+cd dotNet && dotnet pack -c Release
 ```
+
+Python and .NET are not published yet, deliberately. Publishing is public and
+effectively permanent, and the names should be registered by whoever owns the
+accounts.
 
 `prepublishOnly` is what stops a stale `dist/` shipping: the tarball carries
 whatever was last built, and "whatever was last built" is not a release

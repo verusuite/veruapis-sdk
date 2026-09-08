@@ -64,7 +64,40 @@ if ($Only -in "go", "all") {
     Pop-Location
 }
 
-# python and dotnet get the same treatment as each is written.
+if ($Only -in "python", "all") {
+    "`n==> python"
+    Push-Location (Join-Path $root "python")
+
+    # The spec check is a test, so it runs here. The tests directory is the
+    # top level as well as the start, because support.py is imported as a
+    # plain module and has to be on the path.
+    python -m coverage run --rcfile=pyproject.toml -m unittest discover -s tests -t tests
+    if ($LASTEXITCODE -ne 0) { $failed = $true }
+
+    # fail_under lives in pyproject.toml, so the threshold is stated once and
+    # this only has to read the exit code.
+    python -m coverage report --rcfile=pyproject.toml
+    if ($LASTEXITCODE -ne 0) {
+        Write-Host "FAIL: coverage is below $minCoverage%" -ForegroundColor Red
+        $failed = $true
+    }
+
+    Remove-Item .coverage -ErrorAction SilentlyContinue
+    Pop-Location
+}
+
+if ($Only -in "dotnet", "all") {
+    "`n==> dotnet"
+    Push-Location (Join-Path $root ("dotNet", "tests", "VeruSuite.Api.Tests" -join [IO.Path]::DirectorySeparatorChar))
+
+    # The spec check is a test here too, and coverlet carries the threshold in
+    # the csproj, so a run that comes back clean has cleared both bars.
+    dotnet test VeruSuite.Api.Tests.csproj --nologo -v q
+    if ($LASTEXITCODE -ne 0) { $failed = $true }
+
+    Remove-Item coverage.cobertura.xml -ErrorAction SilentlyContinue
+    Pop-Location
+}
 
 if ($failed) { throw "an SDK failed its checks" }
 "`nall checks passed"

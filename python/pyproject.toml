@@ -1,0 +1,52 @@
+[build-system]
+requires = ["setuptools>=61"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "veruapis"
+version = "1.0.0"
+description = "Client for the VeruSuite API: mail, calendar and workspace administration."
+readme = "README.md"
+requires-python = ">=3.9"
+license = { text = "MIT" }
+authors = [{ name = "North Wave MB" }]
+keywords = ["verusuite", "veruapis", "email", "calendar", "api"]
+
+# Deliberately empty, and worth keeping that way. Every dependency in a client
+# library becomes one in every program that installs it, and this needs nothing
+# the standard library does not already have.
+dependencies = []
+
+classifiers = [
+  "Development Status :: 5 - Production/Stable",
+  "Intended Audience :: Developers",
+  "License :: OSI Approved :: MIT License",
+  "Programming Language :: Python :: 3",
+  "Programming Language :: Python :: 3.9",
+  "Programming Language :: Python :: 3.10",
+  "Programming Language :: Python :: 3.11",
+  "Programming Language :: Python :: 3.12",
+  "Programming Language :: Python :: 3.13",
+  "Topic :: Communications :: Email",
+  "Typing :: Typed",
+]
+
+[project.urls]
+Homepage = "https://veruapis.com"
+Repository = "https://github.com/verusuite/veruapis-sdk"
+Issues = "https://github.com/verusuite/veruapis-sdk/issues"
+
+[tool.setuptools.packages.find]
+include = ["veruapis*"]
+
+[tool.coverage.run]
+branch = true
+source = ["veruapis"]
+
+[tool.coverage.report]
+show_missing = true
+skip_covered = false
+exclude_lines = ["pragma: no cover", "if TYPE_CHECKING:"]
+
+# The floor the Node client already holds. Below this the suite is decoration.
+fail_under = 95
