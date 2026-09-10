@@ -5,17 +5,32 @@
 // SDK claims a route the API does not serve, and warns when the API has grown
 // an endpoint the SDK has not got to yet.
 //
-//   node scripts/check-spec.mjs
+//   npm run build && node scripts/check-spec.mjs
 //
 // Exits non-zero on a real disagreement, so CI catches it before a release
 // does. A missing endpoint is a warning, because the SDK is allowed to lag; a
 // route that does not exist is an error, because that is a method somebody
 // will call and get a 404 from.
+//
+// The routes are collected by CALLING every method against a recording server,
+// which is how the Go, Python and .NET checks have always worked and how this
+// one now does. Reading the source was the first approach in both languages and
+// it is wrong in a way that hides: a path built by interpolation or through a
+// helper gives up only its first literal to a regular expression, so a real
+// route is reported as unwrapped and a truncated prefix can match one nobody
+// wrote. Running the client is exact, and it exercises every method as a side
+// effect — a typo in a path stops being something a reader has to notice.
+//
+// It runs against dist/, so the build has to be current. That is the one cost
+// of this form, and prepublishOnly already builds.
 
 import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { dirname, join } from "node:path";
+import { createServer } from "node:http";
 import { parse } from "yaml";
+
+import { VeruApi } from "../dist/client.js";
 
 const here = dirname(fileURLToPath(import.meta.url));
 const specPath = join(here, "..", "..", "spec", "openapi.yaml");
@@ -35,26 +50,129 @@ for (const [path, item] of Object.entries(spec.paths ?? {})) {
   }
 }
 
-// Every route the SDK calls. Read from the source rather than by running it:
-// the point is to see what the code says, not what one code path happens to do.
-const source = ["resources.ts", "client.ts"]
-  .map((f) => readFileSync(join(here, "..", "src", f), "utf8"))
-  .join("\n");
+// The values every call below passes, so a concrete path can be turned back
+// into the templated one the description uses. A range is one of them: it is a
+// path segment the caller supplies, and "r1" stands in for A1 notation.
+const ids = new Set(["f1", "m1", "c1", "e1", "s1", "r1", "k1", "d1", "n1", "o1", "b1", "u1", "p1", "1"]);
 
 const used = new Set();
-const call = /this\.t\.(?:request|paginate)<?[^>]*>?\(\s*(?:"(GET|POST|PUT|PATCH|DELETE)",\s*)?[`"]([^`"]+)[`"]/g;
 
-for (const m of source.matchAll(call)) {
-  const method = m[1] ?? "GET"; // paginate is always a GET
-  used.add(`${method} ${normalise(m[2])}`);
+const server = createServer((req, res) => {
+  const url = new URL(req.url, "http://localhost");
+  used.add(`${req.method} ${templated(url.pathname)}`);
+  res.setHeader("Content-Type", "application/json");
+  // An empty list satisfies most return shapes, and an absent cursor stops the
+  // iterators after one page.
+  res.end(JSON.stringify({ data: [], meta: { request_id: "r", timestamp: "t" } }));
+});
+
+await new Promise((resolve) => server.listen(0, "127.0.0.1", resolve));
+const baseUrl = `http://127.0.0.1:${server.address().port}`;
+
+const api = new VeruApi({ apiKey: "vak_live_test_secret", baseUrl, maxRetries: 0 });
+
+// One invocation of every method the client offers.
+//
+// Adding a method here is the price of adding one to the client, and it is the
+// right price: an unlisted method is one nothing has ever called, which is how
+// a typo in a path ships.
+const everyCall = [
+  () => api.mail.listFolders(),
+  () => api.mail.listMessages({ folder_id: ["f1"] }),
+  () => api.mail.getMessage("m1"),
+  () => api.mail.send({ to: ["a@b.example"], subject: "x", text: "y" }),
+
+  () => api.calendar.listCalendars(),
+  () => api.calendar.getCalendar("c1"),
+  () => api.calendar.listEvents({ start: "s", end: "e" }),
+  () => api.calendar.getEvent("c1", "e1"),
+  () => api.calendar.createEvent("c1", { summary: "x" }),
+  () => api.calendar.updateEvent("c1", "e1", { summary: "y" }),
+  () => api.calendar.deleteEvent("c1", "e1"),
+  () => api.calendar.freeBusy(["a@b.example"], "s", "e"),
+
+  () => api.spreadsheets.get("s1"),
+  () => api.spreadsheets.state("s1"),
+  () => api.spreadsheets.values("s1", "r1", "computed"),
+  () => api.spreadsheets.batchValues("s1", ["Sheet1!A1:B2"]),
+  () => api.spreadsheets.write("s1", "r1", [["a"]]),
+  () => api.spreadsheets.batchWrite("s1", [{ range: "Sheet1!A1", values: [["a"]] }]),
+  () => api.spreadsheets.append("s1", "r1", [["a"]]),
+  () => api.spreadsheets.clear("s1", "r1"),
+  () => api.spreadsheets.applyStructure("s1", "state-token", [{ add_sheet: { title: "Q4" } }]),
+
+  () => api.identity.me(),
+  () => api.identity.listGroups({ limit: 25 }),
+
+  () => api.contacts.listAddressBooks(),
+  () => api.contacts.listContacts({ limit: 25 }),
+  () => api.contacts.getContact("k1"),
+  () => api.contacts.createContact({ name: "Bob" }),
+  () => api.contacts.updateContact("k1", { title: "Buyer" }),
+  () => api.contacts.deleteContact("k1"),
+
+  () => api.documents.listDocuments({ limit: 25 }),
+  () => api.documents.getDocument("d1"),
+  () => api.documents.createDocument({ type: "spreadsheet" }),
+  () => api.documents.updateDocument("d1", { title: "x" }),
+  () => api.documents.deleteDocument("d1"),
+  () => api.documents.restoreDocument("d1"),
+  () => api.documents.copyDocument("d1"),
+  () => api.documents.listComments("d1"),
+  () => api.documents.createComment("d1", { body: "x" }),
+  () => api.documents.updateComment("n1", { state: "resolved" }),
+  () => api.documents.deleteComment("n1"),
+
+  () => api.files.listFolders(),
+  () => api.files.createFolder({ name: "Reports" }),
+  () => api.files.updateFolder("o1", { name: "Archive" }),
+  () => api.files.deleteFolder("o1"),
+  () => api.files.listFiles({ limit: 25 }),
+  () => api.files.getFile("b1"),
+  () => api.files.download("b1"),
+  () => api.files.updateFile("b1", { name: "f.pdf" }),
+  () => api.files.deleteFile("b1"),
+  () => api.files.startUpload({ filename: "f.pdf", size: 10 }),
+  () => api.files.uploadPart("u1", 1, new Uint8Array([1])),
+  () => api.files.uploadStatus("u1"),
+  () => api.files.completeUpload("u1"),
+  () => api.files.abortUpload("u1"),
+  () => api.files.listPermissions("b1"),
+  () => api.files.share("b1", { principal_id: "usr1", role: "editor" }),
+  () => api.files.unshare("b1", "p1"),
+
+  // The iterators, drained so their first request is made.
+  async () => {
+    for await (const _ of api.mail.messages({ folder_id: ["f1"] })) break;
+  },
+  async () => {
+    for await (const _ of api.calendar.events({ start: "s", end: "e" })) break;
+  },
+  async () => {
+    for await (const _ of api.identity.groups()) break;
+  },
+  async () => {
+    for await (const _ of api.contacts.contacts()) break;
+  },
+  async () => {
+    for await (const _ of api.documents.documents()) break;
+  },
+  async () => {
+    for await (const _ of api.files.files()) break;
+  },
+];
+
+for (const call of everyCall) {
+  // A method whose return shape the canned envelope does not satisfy still made
+  // its request, and the request is what is being recorded.
+  await call().catch(() => {});
 }
 
-/** `/v1/messages/${encodeURIComponent(id)}` and `/v1/messages/{id}` are one route. */
-function normalise(path) {
-  return path
-    .replace(/\$\{[^}]+\}/g, "{}")
-    .replace(/\{[^}]+\}/g, "{}")
-    .replace(/\/+$/, "");
+server.close();
+
+if (used.size === 0) {
+  console.error("no routes were recorded; the harness is broken, not the client");
+  process.exit(1);
 }
 
 const unknown = [...used].filter((r) => !documented.has(r)).sort();
@@ -85,3 +203,24 @@ if (!failed) {
 }
 
 process.exit(failed ? 1 : 0);
+
+/** A concrete path back to the templated one: /v1/messages/m1 is /v1/messages/{}. */
+function templated(path) {
+  return path
+    .split("/")
+    .map((segment) => (ids.has(safeDecode(segment)) ? "{}" : segment))
+    .join("/")
+    .replace(/\/+$/, "");
+}
+
+function safeDecode(segment) {
+  try {
+    return decodeURIComponent(segment);
+  } catch {
+    return segment;
+  }
+}
+
+function normalise(path) {
+  return path.replace(/\{[^}]+\}/g, "{}").replace(/\/+$/, "");
+}

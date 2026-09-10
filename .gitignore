@@ -21,3 +21,7 @@ obj/
 # Local environment
 .env
 .env.*
+
+# Test output
+coverage.cobertura.xml
+coverage/
