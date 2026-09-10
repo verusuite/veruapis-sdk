@@ -395,7 +395,24 @@ class ConfigurationTest(unittest.TestCase):
 
     def test_a_negative_retry_count_means_none(self) -> None:
         self.assertEqual(VeruApi("k", max_retries=-3).max_retries, 0)
+class VersionTest(unittest.TestCase):
+    def test_the_package_and_its_metadata_agree(self) -> None:
+        """__version__ and pyproject hold the same number.
 
+        Two places holding one version is two places to forget, and the one
+        that gets forgotten is whichever a release does not read. This is the
+        cheapest way to find out before an upload rather than after.
+        """
+        import re
+        from pathlib import Path
+
+        import veruapis
+
+        pyproject = (Path(__file__).parent.parent / "pyproject.toml").read_text(encoding="utf-8")
+        declared = re.search(r'^version = "([^"]+)"', pyproject, re.MULTILINE)
+
+        self.assertIsNotNone(declared, "pyproject.toml declares no version")
+        self.assertEqual(veruapis.__version__, declared.group(1))
 
 if __name__ == "__main__":
     unittest.main()

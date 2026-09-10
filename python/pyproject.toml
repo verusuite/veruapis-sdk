@@ -4,8 +4,8 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "veruapis"
-version = "1.0.0"
-description = "Client for the VeruSuite API: mail, calendar and workspace administration."
+version = "1.1.0"
+description = "Client for the VeruSuite API: mail, calendar, contacts, documents, spreadsheets, files and workspace administration."
 readme = "README.md"
 requires-python = ">=3.9"
 license = { text = "MIT" }
@@ -38,6 +38,12 @@ Issues = "https://github.com/verusuite/veruapis-sdk/issues"
 
 [tool.setuptools.packages.find]
 include = ["veruapis*"]
+
+# PEP 561. Without this marker the annotations in this package are invisible to
+# a type checker once it is installed, which would make the Typing :: Typed
+# classifier above a claim rather than a fact.
+[tool.setuptools.package-data]
+veruapis = ["py.typed"]
 
 [tool.coverage.run]
 branch = true

@@ -20,9 +20,9 @@
     <NoWarn>$(NoWarn);CS1591</NoWarn>
 
     <PackageId>VeruSuite.Api</PackageId>
-    <Version>1.0.0</Version>
+    <Version>1.1.0</Version>
     <Authors>North Wave MB</Authors>
-    <Description>Client for the VeruSuite API: mail, calendar and workspace administration.</Description>
+    <Description>Client for the VeruSuite API: mail, calendar, contacts, documents, spreadsheets, files and workspace administration.</Description>
     <PackageLicenseExpression>MIT</PackageLicenseExpression>
     <PackageProjectUrl>https://veruapis.com</PackageProjectUrl>
     <RepositoryUrl>https://github.com/verusuite/veruapis-sdk</RepositoryUrl>
