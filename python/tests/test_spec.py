@@ -26,13 +26,28 @@ from typing import Dict, List, Set
 
 from support import FakeAPI, Reply
 
-from veruapis import Event, SendMessage, VeruApi
+from veruapis import (
+    Comment,
+    Contact,
+    Document,
+    Event,
+    FileFolder,
+    NewUpload,
+    Permission,
+    SendMessage,
+    ValueRange,
+    VeruApi,
+)
+from veruapis.documents import TYPE_SPREADSHEET
+from veruapis.spreadsheets import RENDER_COMPUTED
 
 SPEC = Path(__file__).resolve().parents[2] / "spec" / "openapi.json"
 
 # The values every_call passes, so a concrete path can be turned back into the
 # templated one the specification describes.
-IDS = {"f1", "m1", "c1", "e1"}
+# A range is an id here too: it is a path segment the caller supplies, and
+# "r1" stands in for the A1 notation a real call carries.
+IDS = {"f1", "m1", "c1", "e1", "s1", "r1", "k1", "d1", "n1", "o1", "b1", "u1", "p1", "1"}
 
 
 def every_call(api: VeruApi) -> None:
@@ -58,10 +73,68 @@ def every_call(api: VeruApi) -> None:
     api.calendar.delete_event("c1", "e1")
     api.calendar.free_busy(["a@b.example"], "s", "e")
 
+    api.spreadsheets.get("s1")
+    api.spreadsheets.state("s1")
+    api.spreadsheets.values("s1", "r1", render=RENDER_COMPUTED)
+    api.spreadsheets.batch_values("s1", ["Sheet1!A1:B2"])
+    api.spreadsheets.write("s1", "r1", [["a"]])
+    api.spreadsheets.batch_write("s1", [ValueRange(range="Sheet1!A1", values=[["a"]])])
+    api.spreadsheets.append("s1", "r1", [["a"]])
+    api.spreadsheets.clear("s1", "r1")
+    api.spreadsheets.apply_structure("s1", "state-token", [{"add_sheet": {"title": "Q4"}}])
+
+    api.identity.me()
+    api.identity.list_groups(limit=25)
+
+    api.contacts.list_address_books()
+    api.contacts.list_contacts(limit=25)
+    api.contacts.get_contact("k1")
+    api.contacts.create_contact(Contact(name="Bob"))
+    api.contacts.update_contact("k1", Contact(title="Buyer"))
+    api.contacts.delete_contact("k1")
+
+    api.documents.list_documents(limit=25)
+    api.documents.get_document("d1")
+    api.documents.create_document(Document(type=TYPE_SPREADSHEET))
+    api.documents.update_document("d1", Document(title="x"))
+    api.documents.delete_document("d1")
+    api.documents.restore_document("d1")
+    api.documents.copy_document("d1")
+    api.documents.list_comments("d1")
+    api.documents.create_comment("d1", Comment(body="x"))
+    api.documents.update_comment("n1", Comment(state="resolved"))
+    api.documents.delete_comment("n1")
+
+    api.files.list_folders()
+    api.files.create_folder(FileFolder(name="Reports"))
+    api.files.update_folder("o1", name="Archive")
+    api.files.delete_folder("o1")
+    api.files.list_files(limit=25)
+    api.files.get_file("b1")
+    api.files.download("b1")
+    api.files.update_file("b1", name="f.pdf")
+    api.files.delete_file("b1")
+    api.files.start_upload(NewUpload(filename="f.pdf", size=10))
+    api.files.upload_part("u1", 1, b"bytes")
+    api.files.upload_status("u1")
+    api.files.complete_upload("u1")
+    api.files.abort_upload("u1")
+    api.files.list_permissions("b1")
+    api.files.share("b1", Permission(principal_id="usr1", role="editor"))
+    api.files.unshare("b1", "p1")
+
     # The iterators, drained so their first request is made.
     for _ in api.mail.messages(folder_id=["f1"]):
         break
     for _ in api.calendar.events(start="s", end="e"):
+        break
+    for _ in api.identity.groups():
+        break
+    for _ in api.contacts.contacts():
+        break
+    for _ in api.documents.documents():
+        break
+    for _ in api.files.files():
         break
 
 

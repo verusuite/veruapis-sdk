@@ -1,5 +1,13 @@
-import { CalendarApi, Mail } from "./resources.js";
-import type { Envelope } from "./types.js";
+import {
+  CalendarApi,
+  Contacts,
+  Documents,
+  Files,
+  Identity,
+  Mail,
+  Spreadsheets,
+} from "./resources.js";
+import type { Envelope, FileContent } from "./types.js";
 
 /**
  * A client for the VeruSuite API.
@@ -92,6 +100,30 @@ export type RequestOptions = {
    */
   idempotencyKey?: string;
 
+  /**
+   * The document state a structural change is conditional on, sent as
+   * `If-Match`.
+   *
+   * One endpoint takes it, for a reason worth stating: inserting or deleting
+   * rows moves everything below them, so a change applied to a document that
+   * has moved on merges cleanly into a corrupt grid. A stale token is refused
+   * with a conflict and nothing is applied.
+   */
+  ifMatch?: string;
+
+  /**
+   * Sent as-is, with `contentType`, for the one call that carries bytes rather
+   * than JSON: a part of a resumable upload.
+   */
+  rawBody?: Uint8Array;
+  contentType?: string;
+
+  /**
+   * Asks for part of a file, answered with a 206 carrying just that part. How a
+   * file larger than the proxy's ceiling is fetched, and how media seeks.
+   */
+  range?: string;
+
   signal?: AbortSignal;
 };
 
@@ -105,6 +137,7 @@ export interface Transport {
   request<T>(method: Method, path: string, options?: RequestOptions): Promise<T>;
   requestEnvelope<T>(method: Method, path: string, options?: RequestOptions): Promise<Envelope<T>>;
   paginate<T>(path: string, options?: RequestOptions): AsyncGenerator<T>;
+  requestBytes(method: Method, path: string, options?: RequestOptions): Promise<FileContent>;
 }
 
 export class VeruApi implements Transport {
@@ -113,6 +146,21 @@ export class VeruApi implements Transport {
 
   /** Calendars, events and availability. */
   readonly calendar: CalendarApi;
+
+  /** The contents of a spreadsheet: ranges, appends and structural changes. */
+  readonly spreadsheets: Spreadsheets;
+
+  /** Documents and spreadsheets, their comments and sharing. */
+  readonly documents: Documents;
+
+  /** Uploaded files, their folders, and resumable upload. */
+  readonly files: Files;
+
+  /** Who the key acts as, and the workspace's groups. */
+  readonly identity: Identity;
+
+  /** Address books and the people in them. */
+  readonly contacts: Contacts;
 
   readonly #apiKey: string;
   readonly #baseUrl: string;
@@ -133,6 +181,11 @@ export class VeruApi implements Transport {
 
     this.mail = new Mail(this);
     this.calendar = new CalendarApi(this);
+    this.spreadsheets = new Spreadsheets(this);
+    this.documents = new Documents(this);
+    this.files = new Files(this);
+    this.identity = new Identity(this);
+    this.contacts = new Contacts(this);
   }
 
   /**
@@ -146,6 +199,40 @@ export class VeruApi implements Transport {
   async request<T>(method: Method, path: string, options: RequestOptions = {}): Promise<T> {
     const envelope = await this.requestEnvelope<T>(method, path, options);
     return envelope.data;
+  }
+
+  /**
+   * A call whose response is a file rather than an envelope.
+   *
+   * One attempt, unlike `request`. A download that failed halfway has already
+   * handed back part of a file, and starting again would concatenate two
+   * prefixes into something that is neither — the caller retries with a
+   * `range` instead, which is why one is supported.
+   */
+  async requestBytes(
+    method: Method,
+    path: string,
+    options: RequestOptions = {}
+  ): Promise<FileContent> {
+    const headers: Record<string, string> = {
+      Authorization: `Bearer ${this.#apiKey}`,
+      Accept: "*/*",
+    };
+    if (options.range !== undefined) headers["Range"] = options.range;
+
+    const res = await this.#fetch(this.#baseUrl + path, {
+      method,
+      headers,
+      signal: options.signal,
+    });
+    if (!res.ok) {
+      throw new VeruApiError(res.status, await safeJson(res), retryAfter(res));
+    }
+
+    return {
+      bytes: new Uint8Array(await res.arrayBuffer()),
+      contentType: res.headers.get("Content-Type") ?? "application/octet-stream",
+    };
   }
 
   /** As `request`, but returns the envelope, including `meta.next_cursor`. */
@@ -173,10 +260,18 @@ export class VeruApi implements Transport {
     };
     if (options.body !== undefined) {
       headers["Content-Type"] = "application/json";
+    } else if (options.contentType !== undefined) {
+      headers["Content-Type"] = options.contentType;
+    }
+    if (options.range !== undefined) {
+      headers["Range"] = options.range;
     }
     // Writes get one whether or not the caller thought about it.
     if (method !== "GET" && method !== "DELETE") {
       headers["Idempotency-Key"] = options.idempotencyKey ?? crypto.randomUUID();
+    }
+    if (options.ifMatch !== undefined) {
+      headers["If-Match"] = options.ifMatch;
     }
 
     let lastError: unknown;
@@ -193,7 +288,13 @@ export class VeruApi implements Transport {
         const res = await this.#fetch(url, {
           method,
           headers,
-          body: options.body === undefined ? undefined : JSON.stringify(options.body),
+          body:
+            options.body !== undefined
+              ? JSON.stringify(options.body)
+              : // A cast because TypeScript's Uint8Array is generic over its
+                // buffer and BodyInit predates that; fetch takes the bytes
+                // either way.
+                (options.rawBody as BodyInit | undefined),
           signal,
         });
 

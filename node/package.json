@@ -37,7 +37,7 @@
     "test": "tsx --test test/*.test.ts",
     "coverage": "c8 tsx --test test/*.test.ts",
     "check-spec": "node scripts/check-spec.mjs",
-    "prepublishOnly": "npm run check-spec && npm run coverage && npm run build"
+    "prepublishOnly": "npm run build && npm run check-spec && npm run coverage"
   },
   "keywords": [
     "verusuite",

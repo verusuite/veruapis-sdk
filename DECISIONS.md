@@ -37,18 +37,21 @@ Test-time tools are not covered by this rule. Python uses `coverage`, .NET uses
 
 ### D-2. The spec check runs the client rather than reading it
 
-Three of the four clients now collect the routes they call by **invoking every
-method against a recording transport** and comparing what arrived to
+All four clients collect the routes they call by **invoking every method
+against a recording transport** and comparing what arrived to
 `spec/openapi.json`.
 
-Node is the exception: `scripts/check-spec.mjs` scans the source with a regular
-expression. That is the approach the Go client tried first and abandoned, and
-the comment in `go/spec_test.go` says why: a path built by concatenation gives
-up only its first literal to a regex, so real routes were reported as unwrapped
-and the check passed on truncated prefixes that happened to match.
+Node was the exception until the spreadsheet methods landed, and they are what
+showed the cost. `scripts/check-spec.mjs` scanned the source with a regular
+expression — the approach the Go client tried first and abandoned, for the
+reason `go/spec_test.go` records: a path built by concatenation gives up only
+its first literal to a regex. The spreadsheet paths go through a helper that
+escapes the range, so the scanner reported three routes as unwrapped that the
+client had wrapped, and would equally have passed a truncated prefix matching a
+route nobody wrote.
 
-**Open: convert the Node check to the running form.** It is the only one that
-can be quietly wrong. Nothing is known to be wrong with it today.
+It now runs the client, like the other three. The one cost is that it reads
+`dist/`, so the build has to be current; `prepublishOnly` already builds.
 
 ### D-3. The clients are checked against each other, not only against the spec
 

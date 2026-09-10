@@ -30,7 +30,10 @@ public class SpecTests
 {
     // The values EveryCall passes, so a concrete path can be turned back into
     // the templated one the specification describes.
-    private static readonly HashSet<string> Ids = ["f1", "m1", "c1", "e1"];
+    // A range is one of them: it is a path segment the caller supplies, and
+    // "r1" stands in for the A1 notation a real call carries.
+    private static readonly HashSet<string> Ids =
+        ["f1", "m1", "c1", "e1", "s1", "r1", "k1", "d1", "n1", "o1", "b1", "u1", "p1", "1"];
 
     /// <summary>
     /// One invocation of every method this client offers.
@@ -57,6 +60,62 @@ public class SpecTests
         await api.Calendar.UpdateEventAsync("c1", "e1", new Event { Summary = "y" });
         await api.Calendar.DeleteEventAsync("c1", "e1");
         await api.Calendar.FreeBusyAsync(["a@b.example"], "s", "e");
+
+        await api.Spreadsheets.GetAsync("s1");
+        await api.Spreadsheets.StateAsync("s1");
+        await api.Spreadsheets.ValuesAsync("s1", "r1", SpreadsheetsClient.RenderComputed);
+        await api.Spreadsheets.BatchValuesAsync("s1", ["Sheet1!A1:B2"]);
+        await api.Spreadsheets.WriteAsync("s1", "r1", [["a"]]);
+        await api.Spreadsheets.BatchWriteAsync("s1", [new ValueRange { Range = "Sheet1!A1" }]);
+        await api.Spreadsheets.AppendAsync("s1", "r1", [["a"]]);
+        await api.Spreadsheets.ClearAsync("s1", "r1");
+        await api.Spreadsheets.ApplyStructureAsync("s1", "state-token",
+            [new Dictionary<string, object?> { ["add_sheet"] = new { title = "Q4" } }]);
+
+        await api.Identity.MeAsync();
+        await api.Identity.ListGroupsAsync(25);
+
+        await api.Contacts.ListAddressBooksAsync();
+        await api.Contacts.ListContactsAsync(new ListContactsQuery { Limit = 25 });
+        await api.Contacts.GetContactAsync("k1");
+        await api.Contacts.CreateContactAsync(new Contact { Name = "Bob" });
+        await api.Contacts.UpdateContactAsync("k1", new Contact { Title = "Buyer" });
+        await api.Contacts.DeleteContactAsync("k1");
+
+        await api.Documents.ListDocumentsAsync(new ListDocumentsQuery { Limit = 25 });
+        await api.Documents.GetDocumentAsync("d1");
+        await api.Documents.CreateDocumentAsync(new Document { Type = DocumentsClient.TypeSpreadsheet });
+        await api.Documents.UpdateDocumentAsync("d1", new Document { Title = "x" });
+        await api.Documents.DeleteDocumentAsync("d1");
+        await api.Documents.RestoreDocumentAsync("d1");
+        await api.Documents.CopyDocumentAsync("d1");
+        await api.Documents.ListCommentsAsync("d1");
+        await api.Documents.CreateCommentAsync("d1", new Comment { Body = "x" });
+        await api.Documents.UpdateCommentAsync("n1", new Comment { State = "resolved" });
+        await api.Documents.DeleteCommentAsync("n1");
+
+        await api.Files.ListFoldersAsync();
+        await api.Files.CreateFolderAsync(new FileFolder { Name = "Reports" });
+        await api.Files.UpdateFolderAsync("o1", name: "Archive");
+        await api.Files.DeleteFolderAsync("o1");
+        await api.Files.ListFilesAsync(new ListFilesQuery { Limit = 25 });
+        await api.Files.GetFileAsync("b1");
+        await api.Files.DownloadAsync("b1");
+        await api.Files.UpdateFileAsync("b1", name: "f.pdf");
+        await api.Files.DeleteFileAsync("b1");
+        await api.Files.StartUploadAsync(new NewUpload { Filename = "f.pdf", Size = 10 });
+        await api.Files.UploadPartAsync("u1", 1, [1, 2, 3]);
+        await api.Files.UploadStatusAsync("u1");
+        await api.Files.CompleteUploadAsync("u1");
+        await api.Files.AbortUploadAsync("u1");
+        await api.Files.ListPermissionsAsync("b1");
+        await api.Files.ShareAsync("b1", new Permission { PrincipalId = "usr1", Role = "editor" });
+        await api.Files.UnshareAsync("b1", "p1");
+
+        await foreach (var _ in api.Identity.GroupsAsync()) break;
+        await foreach (var _ in api.Contacts.ContactsAsync()) break;
+        await foreach (var _ in api.Documents.DocumentsAsync()) break;
+        await foreach (var _ in api.Files.FilesAsync()) break;
 
         // The iterators, drained so their first request is made.
         await foreach (var _ in api.Mail.MessagesAsync(new ListMessagesQuery { FolderId = ["f1"] }))
