@@ -105,6 +105,11 @@ public sealed class VeruApiClient : IDisposable
 
         Mail = new MailClient(this);
         Calendar = new CalendarClient(this);
+        Spreadsheets = new SpreadsheetsClient(this);
+        Documents = new DocumentsClient(this);
+        Files = new FilesClient(this);
+        Identity = new IdentityClient(this);
+        Contacts = new ContactsClient(this);
     }
 
     /// <summary>Folders, messages, drafts and sending.</summary>
@@ -113,6 +118,21 @@ public sealed class VeruApiClient : IDisposable
     /// <summary>Calendars, events and availability.</summary>
     public CalendarClient Calendar { get; }
 
+    /// <summary>Documents and spreadsheets, their comments and sharing.</summary>
+    public DocumentsClient Documents { get; }
+
+    /// <summary>Uploaded files, their folders, and resumable upload.</summary>
+    public FilesClient Files { get; }
+
+    /// <summary>Who the key acts as, and the workspace's groups.</summary>
+    public IdentityClient Identity { get; }
+
+    /// <summary>Address books and the people in them.</summary>
+    public ContactsClient Contacts { get; }
+
+    /// <summary>The contents of a spreadsheet: ranges, appends and structural changes.</summary>
+    public SpreadsheetsClient Spreadsheets { get; }
+
     /// <summary>
     /// Performs one request and returns its data and meta.
     /// </summary>
@@ -120,12 +140,51 @@ public sealed class VeruApiClient : IDisposable
     /// Public, because a client is allowed to lag the API: an endpoint nothing
     /// here wraps is still one call away.
     /// </remarks>
+    /// <summary>Fetches a file's bytes and its content type.</summary>
+    /// <remarks>
+    /// The one shape in this API that is not an envelope. A refusal still
+    /// arrives as one and is still thrown as a <see cref="VeruApiException"/>,
+    /// so the only difference a caller sees is what they get on success.
+    /// <para>
+    /// One attempt, unlike <see cref="SendAsync{T}"/>. A download that failed
+    /// halfway has already handed back part of a file, and starting again would
+    /// join two prefixes into something that is neither — the caller passes a
+    /// range instead, which is why one is supported.
+    /// </para>
+    /// </remarks>
+    public async Task<(byte[] Bytes, string ContentType)> DownloadAsync(
+        string path,
+        string? range = null,
+        CancellationToken cancellationToken = default)
+    {
+        using var request = new HttpRequestMessage(HttpMethod.Get, _baseUrl + path);
+        request.Headers.TryAddWithoutValidation("Authorization", "Bearer " + _apiKey);
+        request.Headers.TryAddWithoutValidation("Accept", "*/*");
+        if (range is not null)
+        {
+            request.Headers.TryAddWithoutValidation("Range", range);
+        }
+
+        using var response = await _http.SendAsync(request, cancellationToken).ConfigureAwait(false);
+        var bytes = await response.Content.ReadAsByteArrayAsync(cancellationToken).ConfigureAwait(false);
+
+        if ((int)response.StatusCode >= 400)
+        {
+            throw ErrorReader.Read((int)response.StatusCode, response, bytes);
+        }
+
+        return (bytes, response.Content.Headers.ContentType?.MediaType ?? "application/octet-stream");
+    }
+
     public async Task<(T? Data, Meta Meta)> SendAsync<T>(
         HttpMethod method,
         string path,
         IEnumerable<KeyValuePair<string, object?>>? query = null,
         object? body = null,
         string? idempotencyKey = null,
+        string? ifMatch = null,
+        byte[]? rawBody = null,
+        string? contentType = null,
         CancellationToken cancellationToken = default)
     {
         var target = _baseUrl + path;
@@ -135,9 +194,11 @@ public sealed class VeruApiClient : IDisposable
             target += "?" + encoded;
         }
 
-        byte[]? payload = body is null
-            ? null
-            : JsonSerializer.SerializeToUtf8Bytes(body, body.GetType(), Json);
+        // The one call that carries bytes rather than JSON is a part of a
+        // resumable upload; everything else is serialised.
+        byte[]? payload = body is not null
+            ? JsonSerializer.SerializeToUtf8Bytes(body, body.GetType(), Json)
+            : rawBody;
 
         // One key for every attempt, not one per attempt. A retry that
         // generated a new key would be a second request as far as the server is
@@ -161,11 +222,22 @@ public sealed class VeruApiClient : IDisposable
                 {
                     request.Headers.TryAddWithoutValidation("Idempotency-Key", idempotencyKey);
                 }
+                if (ifMatch is not null)
+                {
+                    // One endpoint takes it, for a reason worth stating:
+                    // inserting or deleting rows moves everything below them,
+                    // so a structural change applied to a document that has
+                    // moved on merges cleanly into a corrupt grid. A stale
+                    // token answers 409 and nothing is applied.
+                    request.Headers.TryAddWithoutValidation("If-Match", ifMatch);
+                }
                 if (payload is not null)
                 {
                     // A fresh content per attempt: the previous one is consumed.
                     request.Content = new ByteArrayContent(payload);
-                    request.Content.Headers.TryAddWithoutValidation("Content-Type", "application/json");
+                    request.Content.Headers.TryAddWithoutValidation(
+                        "Content-Type",
+                        body is not null ? "application/json" : contentType ?? "application/octet-stream");
                 }
 
                 response = await _http.SendAsync(request, cancellationToken).ConfigureAwait(false);

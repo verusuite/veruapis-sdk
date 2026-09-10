@@ -268,6 +268,287 @@ _WIRE_NAMES = {"from_": "from"}
 def _wire_name(name: str) -> str:
     return _WIRE_NAMES.get(name, name)
 
+# -------------------------------------------------------------- spreadsheets
+
+
+@dataclass(frozen=True)
+class Merge:
+    """One merged rectangle, zero-based and inclusive at both corners."""
+
+    id: str = ""
+    c0: int = 0
+    r0: int = 0
+    c1: int = 0
+    r1: int = 0
+
+
+@dataclass(frozen=True)
+class Sheet:
+    """One tab, with the extent of what is actually on it."""
+
+    id: str = ""
+    name: str = ""
+    index: int = 0
+    #: The last populated row and column, zero-based. An unbounded range like
+    #: A:A is clamped to these, not to the million rows a grid permits.
+    max_row: int = 0
+    max_column: int = 0
+    range: str = ""
+    merges: List[Merge] = field(default_factory=list)
+
+
+@dataclass(frozen=True)
+class Workbook:
+    """A spreadsheet's structure: its tabs and what is on them."""
+
+    document_id: str = ""
+    sheets: List[Sheet] = field(default_factory=list)
+
+
+@dataclass(frozen=True)
+class DocumentState:
+    """A document's change token: poll it, or send it as a precondition."""
+
+    document_id: str = ""
+    state: str = ""
+    checked_at: str = ""
+
+
+@dataclass(frozen=True)
+class ValueRange:
+    """One rectangle of cells.
+
+    Reads are always rectangular — an empty cell arrives as an empty string —
+    so a caller need not bounds-check each row. A cell is whatever fits: a
+    string, a number, a bool, or a formula written as a string beginning "=".
+    """
+
+    range: str = ""
+    values: List[List[Any]] = field(default_factory=list)
+
+
+@dataclass(frozen=True)
+class WriteResult:
+    """What a value write reports."""
+
+    #: Where the values landed. Set on a single-range write and on an append.
+    range: str = ""
+    updated_cells: int = 0
+    #: The document's state after the write. Keep it to notice somebody else's
+    #: edit, or to send as the precondition on a structural change.
+    state: str = ""
+    #: False when the write stored nothing new — writing a cell the value it
+    #: already holds. Not an error and not worth retrying: nothing was stored
+    #: and nobody with the document open was told.
+    changed: bool = False
+
+
+@dataclass(frozen=True)
+class StructureResult:
+    """What a structural batch reports.
+
+    ``replies`` is positional: one entry per request, in the order sent, empty
+    where an operation returns nothing.
+    """
+
+    replies: List[Dict[str, Any]] = field(default_factory=list)
+    state: str = ""
+    changed: bool = False
+
+# ----------------------------------------------------- workspace and drive
+
+
+@dataclass(frozen=True)
+class Profile:
+    """The user a key acts as. A key can never do more than they can."""
+
+    id: str = ""
+    email: str = ""
+    name: str = ""
+    role: str = ""
+    workspace: Dict[str, Any] = field(default_factory=dict)
+    #: Empty for an account with no mailbox.
+    mailbox_address: str = ""
+    avatar_url: str = ""
+
+
+@dataclass(frozen=True)
+class Group:
+    """One workspace group as a member sees it."""
+
+    id: str = ""
+    name: str = ""
+    description: str = ""
+    #: None when withheld, which happens for a group the caller cannot see
+    #: into. None is not zero: it means unknown, not empty.
+    member_count: Optional[int] = None
+    updated_at: str = ""
+
+
+@dataclass(frozen=True)
+class AddressBook:
+    """One address book in the caller's mailbox."""
+
+    id: str = ""
+    name: str = ""
+    description: str = ""
+    contact_count: int = 0
+    created_at: str = ""
+    updated_at: str = ""
+
+
+@dataclass(frozen=True)
+class ContactEmail:
+    """One address on a contact."""
+
+    address: str = ""
+    type: str = ""
+
+
+@dataclass(frozen=True)
+class ContactPhone:
+    """One number on a contact."""
+
+    number: str = ""
+    type: str = ""
+
+
+@dataclass(frozen=True)
+class Contact:
+    """One entry in an address book."""
+
+    id: str = ""
+    address_book_id: str = ""
+    name: str = ""
+    given_name: str = ""
+    family_name: str = ""
+    emails: List[ContactEmail] = field(default_factory=list)
+    phones: List[ContactPhone] = field(default_factory=list)
+    organization: str = ""
+    title: str = ""
+    notes: str = ""
+    created_at: str = ""
+    updated_at: str = ""
+
+
+@dataclass(frozen=True)
+class Document:
+    """A document or a spreadsheet. An uploaded file is a :class:`File`."""
+
+    id: str = ""
+    type: str = ""
+    title: str = ""
+    #: "active" or "trashed". Deleting trashes; nothing here destroys.
+    state: str = ""
+    #: Who owns it, which is not necessarily the key's owner.
+    owner_id: str = ""
+    #: Empty for a document in the root.
+    folder_id: str = ""
+    #: Yours to shape. The API stores it and does not read it.
+    metadata: Dict[str, Any] = field(default_factory=dict)
+    created_at: str = ""
+    updated_at: str = ""
+
+
+@dataclass(frozen=True)
+class Comment:
+    """One comment or reply on a document."""
+
+    id: str = ""
+    document_id: str = ""
+    #: Set on a reply, empty on a thread's first comment.
+    parent_id: str = ""
+    author_id: str = ""
+    body: str = ""
+    #: "open" or "resolved".
+    state: str = ""
+    created_at: str = ""
+    updated_at: str = ""
+
+
+@dataclass(frozen=True)
+class Permission:
+    """One grant of access to a document or file."""
+
+    id: str = ""
+    #: "user" or "group"; principal_id is that id, not an email.
+    principal_type: str = ""
+    principal_id: str = ""
+    role: str = ""
+    created_by: str = ""
+    created_at: str = ""
+
+
+@dataclass(frozen=True)
+class File:
+    """An uploaded file."""
+
+    id: str = ""
+    type: str = ""
+    #: The display name, which can change.
+    title: str = ""
+    #: What it was uploaded as, which does not.
+    filename: str = ""
+    #: Sniffed from the bytes when stored, not taken from what was declared.
+    mime_type: str = ""
+    size_bytes: int = 0
+    state: str = ""
+    owner_id: str = ""
+    folder_id: str = ""
+    created_at: str = ""
+    updated_at: str = ""
+
+
+@dataclass(frozen=True)
+class FileFolder:
+    """One folder in the drive."""
+
+    id: str = ""
+    name: str = ""
+    #: Empty for a folder at the root.
+    parent_id: str = ""
+    owner_id: str = ""
+    trashed: bool = False
+    created_at: str = ""
+    updated_at: str = ""
+
+
+@dataclass(frozen=True)
+class NewUpload:
+    """A file about to be sent."""
+
+    filename: str = ""
+    #: Required: it decides the part size that comes back.
+    size: int = 0
+    #: Recorded, not trusted: the stored type is sniffed from the bytes.
+    mime_type: str = ""
+    folder_id: str = ""
+
+
+@dataclass(frozen=True)
+class UploadSession:
+    """An upload in progress."""
+
+    session_id: str = ""
+    #: The file this will become, reserved before the bytes are all up.
+    document_id: str = ""
+    #: Slice by exactly this, every part but the last.
+    part_size: int = 0
+    total_size: int = 0
+    status: str = ""
+    #: Which numbers have landed. Read from storage, so a resume survives a
+    #: client restart.
+    uploaded_parts: List[int] = field(default_factory=list)
+    uploaded_bytes: int = 0
+
+
+@dataclass(frozen=True)
+class UploadedPart:
+    """The receipt for one part."""
+
+    part: int = 0
+    etag: str = ""
+
 
 def decode(cls: Any, value: Any) -> Any:
     """Build ``cls`` out of decoded JSON, ignoring anything it does not know.

@@ -313,5 +313,44 @@ class ShapeTest(unittest.TestCase):
         self.assertEqual(encode({"a": [1, 2]}), {"a": [1, 2]})
 
 
+class DriveTest(unittest.TestCase):
+    """The two calls whose bodies are not JSON."""
+
+    def test_a_part_is_sent_as_bytes_rather_than_json(self) -> None:
+        with FakeAPI() as api:
+            api.default = Reply(200, {"data": {"part": 2, "etag": "e"}, "meta": {"request_id": "r"}})
+            receipt = api.client().files.upload_part("u1", 2, b"\x00\xff\x10")
+
+        # Encoding a file as JSON would inflate it and corrupt anything that is
+        # not valid UTF-8, which is most of what people upload.
+        self.assertEqual(api.requests[0].body, b"\x00\xff\x10")
+        self.assertEqual(
+            api.requests[0].headers.get("content-type"), "application/octet-stream"
+        )
+        self.assertEqual(receipt.part, 2)
+
+    def test_a_download_returns_bytes_and_carries_a_range(self) -> None:
+        with FakeAPI() as api:
+            api.default = Reply(200, raw=b"%PDF", headers={"Content-Type": "application/pdf"})
+            raw, content_type = api.client().files.download("b1", range="bytes=0-3")
+
+        self.assertEqual(raw, b"%PDF")
+        self.assertEqual(content_type, "application/pdf")
+        self.assertEqual(api.requests[0].headers.get("range"), "bytes=0-3")
+
+    def test_moving_to_the_root_is_not_the_same_as_leaving_it_alone(self) -> None:
+        with FakeAPI() as api:
+            api.default = Reply(200, {"data": {"id": "b1"}, "meta": {"request_id": "r"}})
+            client = api.client()
+            client.files.update_file("b1", folder_id="o2")
+            client.files.update_file("b1", move_to_root=True)
+            client.files.update_file("b1", name="f.pdf")
+
+        self.assertEqual(api.requests[0].body, {"folder_id": "o2"})
+        self.assertEqual(api.requests[1].body, {"folder_id": ""})
+        # A rename alone says nothing about where the file lives, which is the
+        # case a nullable field cannot express on its own.
+        self.assertEqual(api.requests[2].body, {"name": "f.pdf"})
+
 if __name__ == "__main__":
     unittest.main()

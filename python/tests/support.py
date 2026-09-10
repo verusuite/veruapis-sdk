@@ -70,7 +70,21 @@ class FakeAPI:
 
                 length = int(self.headers.get("Content-Length") or 0)
                 raw = self.rfile.read(length) if length else b""
-                body = json.loads(raw) if raw else None
+
+                # Almost every request is JSON, and one is not: a part of a
+                # resumable upload carries the file's bytes. Recording those as
+                # bytes rather than failing to parse them is what lets a test
+                # assert that the client did not JSON-encode a file.
+                if not raw:
+                    body = None
+                else:
+                    try:
+                        body = json.loads(raw)
+                    except (json.JSONDecodeError, UnicodeDecodeError):
+                        # UnicodeDecodeError as well as the JSON one: a part of
+                        # an upload is arbitrary bytes, and most files are not
+                        # valid UTF-8 at all.
+                        body = raw
 
                 recorder.requests.append(
                     Recorded(

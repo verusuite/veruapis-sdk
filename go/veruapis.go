@@ -49,6 +49,22 @@ type Client struct {
 	// Calendar is calendars, events and availability.
 	Calendar *CalendarService
 
+	// Spreadsheets is the contents of a workbook: ranges, appends and
+	// structural changes.
+	Spreadsheets *SpreadsheetsService
+
+	// Documents is documents and spreadsheets, their comments and sharing.
+	Documents *DocumentsService
+
+	// Files is uploaded files, their folders, and resumable upload.
+	Files *FilesService
+
+	// Identity is who the key acts as, and the workspace's groups.
+	Identity *IdentityService
+
+	// Contacts is address books and the people in them.
+	Contacts *ContactsService
+
 	apiKey     string
 	baseURL    string
 	httpClient *http.Client
@@ -104,6 +120,11 @@ func New(apiKey string, options ...Option) *Client {
 
 	c.Mail = &MailService{client: c}
 	c.Calendar = &CalendarService{client: c}
+	c.Spreadsheets = &SpreadsheetsService{client: c}
+	c.Documents = &DocumentsService{client: c}
+	c.Files = &FilesService{client: c}
+	c.Identity = &IdentityService{client: c}
+	c.Contacts = &ContactsService{client: c}
 	return c
 }
 
@@ -121,6 +142,25 @@ type Request struct {
 	// write when this is empty, because a retry that sends two emails is the
 	// failure people actually hit.
 	IdempotencyKey string
+
+	// RawBody is sent as-is, with ContentType, for the one call that carries
+	// bytes rather than JSON: a part of a resumable upload. Ignored when Body
+	// is set.
+	RawBody     []byte
+	ContentType string
+
+	// Range asks for part of a file, and is answered with a 206 carrying just
+	// that part. How a file larger than the proxy's ceiling is fetched, and how
+	// media seeks.
+	Range string
+
+	// IfMatch is the document state a structural change is conditional on.
+	//
+	// Only one endpoint takes it, and it takes it for a reason worth stating:
+	// inserting or deleting rows moves everything below them, so a change
+	// applied to a document that has moved on merges cleanly into a corrupt
+	// grid. A stale token answers 409 and nothing is applied.
+	IfMatch string
 }
 
 // Envelope is the shape every response arrives in.
@@ -166,6 +206,9 @@ func doEnvelope[T any](ctx context.Context, c *Client, req Request) (Envelope[T]
 	}
 
 	var payload []byte
+	if req.RawBody != nil && req.Body == nil {
+		payload = req.RawBody
+	}
 	if req.Body != nil {
 		encoded, err := json.Marshal(req.Body)
 		if err != nil {
@@ -198,11 +241,20 @@ func doEnvelope[T any](ctx context.Context, c *Client, req Request) (Envelope[T]
 
 		httpReq.Header.Set("Authorization", "Bearer "+c.apiKey)
 		httpReq.Header.Set("Accept", "application/json")
-		if payload != nil {
+		switch {
+		case req.Body != nil:
 			httpReq.Header.Set("Content-Type", "application/json")
+		case req.ContentType != "":
+			httpReq.Header.Set("Content-Type", req.ContentType)
+		}
+		if req.Range != "" {
+			httpReq.Header.Set("Range", req.Range)
 		}
 		if idempotencyKey != "" {
 			httpReq.Header.Set("Idempotency-Key", idempotencyKey)
+		}
+		if req.IfMatch != "" {
+			httpReq.Header.Set("If-Match", req.IfMatch)
 		}
 
 		res, err := c.httpClient.Do(httpReq)
@@ -242,6 +294,56 @@ func doEnvelope[T any](ctx context.Context, c *Client, req Request) (Envelope[T]
 		}
 		lastErr = apiErr
 	}
+}
+
+// Bytes performs a call whose response is a file rather than an envelope.
+//
+// The one shape in this API that is not JSON: a stored file streams back with
+// its own content type. A refusal still arrives as an envelope and is still
+// returned as an *Error, so the only difference a caller sees is what they get
+// on success.
+//
+// The body is read into memory under the same cap as any other response. A file
+// larger than that is fetched with Range, which is why Request carries one.
+//
+// One attempt, unlike Do. A download that failed halfway has already handed
+// back part of a file, and silently starting again would concatenate two
+// prefixes into something that is neither — the caller retries with a Range
+// instead, which is the whole point of supporting one.
+func Bytes(ctx context.Context, c *Client, req Request) ([]byte, string, error) {
+	if c.apiKey == "" {
+		return nil, "", fmt.Errorf("veruapis: no API key. Create one at veruapis.com")
+	}
+
+	target := c.baseURL + req.Path
+	if len(req.Query) > 0 {
+		target += "?" + req.Query.Encode()
+	}
+
+	httpReq, err := http.NewRequestWithContext(ctx, req.Method, target, nil)
+	if err != nil {
+		return nil, "", fmt.Errorf("veruapis: build request: %w", err)
+	}
+	httpReq.Header.Set("Authorization", "Bearer "+c.apiKey)
+	httpReq.Header.Set("Accept", "*/*")
+	if req.Range != "" {
+		httpReq.Header.Set("Range", req.Range)
+	}
+
+	res, err := c.httpClient.Do(httpReq)
+	if err != nil {
+		return nil, "", fmt.Errorf("veruapis: %w", err)
+	}
+	defer res.Body.Close()
+
+	raw, readErr := io.ReadAll(io.LimitReader(res.Body, 32<<20))
+	if readErr != nil {
+		return nil, "", fmt.Errorf("veruapis: read response: %w", readErr)
+	}
+	if res.StatusCode >= 400 {
+		return nil, "", newError(res, raw)
+	}
+	return raw, res.Header.Get("Content-Type"), nil
 }
 
 // readResponse turns one HTTP response into a decoded envelope or an API error.

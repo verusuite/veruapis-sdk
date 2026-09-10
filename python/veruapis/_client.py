@@ -67,13 +67,33 @@ class VeruApi:
         self._sleep: Callable[[float], None] = time.sleep
 
         from .calendars import CalendarClient
+        from .documents import DocumentsClient
+        from .files import FilesClient
         from .mail import MailClient
+        from .spreadsheets import SpreadsheetsClient
+        from .workspace import ContactsClient, IdentityClient
 
         #: Folders, messages, drafts and sending.
         self.mail = MailClient(self)
 
         #: Calendars, events and availability.
         self.calendar = CalendarClient(self)
+
+        #: The contents of a spreadsheet: ranges, appends and structural
+        #: changes. Its lifecycle is documents, because a spreadsheet is one.
+        self.spreadsheets = SpreadsheetsClient(self)
+
+        #: Documents and spreadsheets, their comments and sharing.
+        self.documents = DocumentsClient(self)
+
+        #: Uploaded files, their folders, and resumable upload.
+        self.files = FilesClient(self)
+
+        #: Who the key acts as, and the workspace's groups.
+        self.identity = IdentityClient(self)
+
+        #: Address books and the people in them.
+        self.contacts = ContactsClient(self)
 
     # ------------------------------------------------------------- requests
 
@@ -85,6 +105,9 @@ class VeruApi:
         query: Optional[Dict[str, Any]] = None,
         body: Any = None,
         idempotency_key: Optional[str] = None,
+        if_match: Optional[str] = None,
+        raw_body: Optional[bytes] = None,
+        content_type: Optional[str] = None,
     ) -> Tuple[Any, Meta]:
         """Perform one request and return its data and meta.
 
@@ -99,6 +122,10 @@ class VeruApi:
         payload = None
         if body is not None:
             payload = json.dumps(body).encode("utf-8")
+        elif raw_body is not None:
+            # The one call that carries bytes rather than JSON: a part of a
+            # resumable upload.
+            payload = raw_body
 
         # One key for every attempt, not one per attempt. A retry that
         # generated a new key would be a second request as far as the server is
@@ -115,6 +142,14 @@ class VeruApi:
             headers["Content-Type"] = "application/json"
         if idempotency_key:
             headers["Idempotency-Key"] = idempotency_key
+        if body is None and content_type:
+            headers["Content-Type"] = content_type
+        if if_match:
+            # One endpoint takes it, for a reason worth stating: inserting or
+            # deleting rows moves everything below them, so a structural change
+            # applied to a document that has moved on merges cleanly into a
+            # corrupt grid. A stale token answers 409 and nothing is applied.
+            headers["If-Match"] = if_match
 
         attempt = 0
         while True:
@@ -144,6 +179,36 @@ class VeruApi:
 
             self._sleep(err.retry_after if err.retry_after else _backoff(attempt))
             attempt += 1
+
+    def download(
+        self,
+        path: str,
+        *,
+        range: Optional[str] = None,
+    ) -> Tuple[bytes, str]:
+        """Fetch a file's bytes and its content type.
+
+        The one shape in this API that is not an envelope. A refusal still
+        arrives as one and is still raised as a :class:`VeruApiError`, so the
+        only difference a caller sees is what they get on success.
+
+        One attempt, unlike :meth:`request`. A download that failed halfway has
+        already handed back part of a file, and starting again would join two
+        prefixes into something that is neither — the caller passes a ``range``
+        instead, which is why one is supported.
+        """
+        headers = {
+            "Authorization": "Bearer " + self.api_key,
+            "Accept": "*/*",
+            "User-Agent": _USER_AGENT,
+        }
+        if range:
+            headers["Range"] = range
+
+        status, response_headers, raw = self._send("GET", self.base_url + path, headers, None)
+        if status >= 400:
+            raise error_from_response(status, response_headers, raw)
+        return raw, response_headers.get("Content-Type", "application/octet-stream")
 
     def _send(
         self,
