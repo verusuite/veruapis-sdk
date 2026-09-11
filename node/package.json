@@ -1,6 +1,6 @@
 {
   "name": "@verusuite/api",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "description": "Client for the VeruSuite API: mail, calendar, contacts, documents, spreadsheets, files and workspace administration.",
   "license": "MIT",
   "author": "North Wave MB",
